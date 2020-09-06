@@ -12,7 +12,7 @@ TOKEN = ''  # 여기에 디스코드 봇 토큰 입력
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
 TARGET_USER = 000000000000000000  # 여기에 본인의 디스코드 유저 ID 입력
 TEST_MODE = False  # 테스트 모드 True로 설정시 10초마다 가격 표시
-INTERVAL = 10  # 가격을 확인할 주기
+INTERVAL = 60  # 가격을 확인할 주기
 
 EMAIL = ''  # 쿠팡 이메일
 PW = ''  # 쿠팡 비밀번호
