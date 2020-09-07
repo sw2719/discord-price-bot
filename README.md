@@ -1,5 +1,5 @@
 # CoupangWishlistDiscordBot
-price_getter 는 찜 목록에 있는 상품들의 가격이 변동되면 디스코드 DM으로 알려주고, price_getter_url은 직접 가격 알림을 받을 상품 URL을 입력하는 방식입니다.
+price_getter 는 찜 목록에 있는 상품들의 가격이 변동되면 디스코드 DM으로 알려주고, price_getter_url은 직접 가격 알림을 받을 상품 URL을 입력하는 방식입니다. 둘 다 Work-in-progress 입니다.
 * 경고: 테스트 결과 봇에서 쿠팡에 로그인하면 PC에서는 로그인이 풀렸습니다. 모바일은 모르겠습니다.
 
 # 사용 방법
