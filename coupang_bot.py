@@ -21,8 +21,6 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 TEST_MODE = False
 INTERVAL = 45  # 가격을 확인할 주기 (초)
 
-LINE = '-------------------------------------------------------------'
-
 
 class CoupangPriceBot(commands.Bot):
     def __init__(self):
@@ -125,13 +123,11 @@ class CoupangPriceBot(commands.Bot):
             await asyncio.gather(*tasks)
 
             message_to_send = ["삭제할 상품의 번호를 입력하세요. (예시: 1)\n취소하려면 '취소'라고 입력하세요.\n"]
-            message_to_send.append(LINE)
 
             for i, url in enumerate(self.url_list):
                 index = i + 1
                 message_to_send.append(f"{str(index)}: {self.item_dict[url]['item_name']}")
 
-            message_to_send.append(LINE)
             await ctx.send('\n'.join(message_to_send))
 
             def check(message):
@@ -167,9 +163,7 @@ class CoupangPriceBot(commands.Bot):
             if self.url_list:
                 await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
                 await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               f'{LINE}\n' +
-                               '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
-                               f'\n{LINE}\n')
+                               '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
@@ -222,10 +216,8 @@ class CoupangPriceBot(commands.Bot):
         await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
         if self.url_list:
             await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
-                                   f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n'
-                                   f'{LINE}\n' +
-                                   '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
-                                   f'\n{LINE}\n')
+                                   f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
+                                   '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
         else:
             await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
                                    '추가된 상품이 없습니다.')
