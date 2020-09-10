@@ -15,7 +15,7 @@ if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.starts
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # 설정
-TARGET_USER_ID = 0  # 자신의 디스코드 유저 ID 입력
+TARGET_USER_ID = ''  # 자신의 디스코드 유저 ID 입력
 TOKEN = ''  # 디스코드 봇 토큰 입력
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
 TEST_MODE = False
@@ -210,7 +210,7 @@ class CoupangPriceBot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
-        self.owner_id = TARGET_USER_ID
+        self.owner_id = int(TARGET_USER_ID)
         self.target = self.get_user(self.owner_id)
 
         await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
