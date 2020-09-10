@@ -150,8 +150,10 @@ class CoupangPriceBot(commands.Bot):
                 return
 
             remove_index = int(message.content) - 1
+            remove_url = self.url_list[remove_index]
             removed_item = self.item_dict[self.url_list[remove_index]]['item_name']
 
+            del self.item_dict[remove_url]
             del self.url_list[remove_index]
             self.save_url_list()
 
