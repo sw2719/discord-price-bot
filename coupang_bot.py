@@ -19,7 +19,7 @@ TARGET_USER_ID = 0  # 자신의 디스코드 유저 ID 입력
 TOKEN = ''  # 디스코드 봇 토큰 입력
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
 TEST_MODE = False
-INTERVAL = 10
+INTERVAL = 45  # 가격을 확인할 주기 (초)
 
 LINE = '-------------------------------------------------------------'
 
@@ -66,6 +66,11 @@ class CoupangPriceBot(commands.Bot):
             txt.write('\n'.join(self.url_list))
 
     def add_bot_commands(self):
+        @self.command()
+        async def commands(ctx):
+            if ctx.author.id == self.owner_id:
+                await ctx.send('```명령어 도움말\n\n.add [상품 URL]\n봇에 해당 상품 URL을 추가합니다.\n\n.remove - 봇에서 상품을 제거합니다.\n\n.list - 추가된 상품 목록을 확인합니다.```')
+
         @self.command()
         async def add(ctx, url=None):
             if ctx.author.id != self.owner_id:
@@ -157,13 +162,16 @@ class CoupangPriceBot(commands.Bot):
             await ctx.send(f'{removed_item}을(를) 삭제했습니다.')
             return
 
-        @self.command()
-        async def items(ctx):
-            await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
-            await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                           f'{LINE}\n' +
-                           '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
-                           f'\n{LINE}\n')
+        @self.command(name='list')
+        async def list_(ctx):
+            if self.url_list:
+                await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+                await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
+                               f'{LINE}\n' +
+                               '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
+                               f'\n{LINE}\n')
+            else:
+                await ctx.send('추가된 상품이 없습니다.')
 
     async def fetch_coupang(self, url, return_value=False):
         try:
@@ -212,10 +220,15 @@ class CoupangPriceBot(commands.Bot):
         self.target = self.get_user(self.owner_id)
 
         await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
-        await self.target.send(f'봇이 시작되었습니다. {str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               f'{LINE}\n' +
-                               '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
-                               f'\n{LINE}\n')
+        if self.url_list:
+            await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
+                                   f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n'
+                                   f'{LINE}\n' +
+                                   '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]) +
+                                   f'\n{LINE}\n')
+        else:
+            await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
+                                   '추가된 상품이 없습니다.')
 
     async def check_price(self):
         await asyncio.sleep(5)
