@@ -1,6 +1,8 @@
 import sys
 import asyncio
 import re
+import json
+import os
 import logging
 import traceback
 import aiohttp
@@ -14,17 +16,41 @@ print('Python version:', sys.version)
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):  # 파이썬 3.8 이상 & Windows 환경에서 실행하는 경우
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-# 설정
-TARGET_USER_ID = ''  # 자신의 디스코드 유저 ID 입력
-TOKEN = ''  # 디스코드 봇 토큰 입력
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
-TEST_MODE = False
-INTERVAL = 45  # 가격을 확인할 주기 (초)
+
+
+def reset_cfg():
+    default = {"bot_token": "",
+               "user_id": "",
+               "test_mode": False,
+               "interval": 60}
+
+    with open('config.json', 'w') as f:
+        f.write(json.dumps(default, indent=4))
+        print('Created new config file. Please provide bot token and user id in it.')
+        sys.exit()
+
+
+if not os.path.isfile('config.json'):
+    reset_cfg()
+else:
+    try:
+        with open('config.json', 'r') as f:
+            cfg = json.loads(f.read())
+            TOKEN = cfg['bot_token']
+            TARGET_USER_ID = cfg['user_id']
+            TEST_MODE = cfg['test_mode']
+            INTERVAL = cfg['interval']
+
+            del cfg
+    except KeyError:
+        reset_cfg()
 
 
 class CoupangPriceBot(commands.Bot):
     def __init__(self):
         super().__init__('.')
+        self.init = True
         self.item_dict = {}
         self.header = {'User-Agent': USER_AGENT, 'Connection': 'keep-alive'}
 
@@ -215,14 +241,18 @@ class CoupangPriceBot(commands.Bot):
         self.owner_id = int(TARGET_USER_ID)
         self.target = self.get_user(self.owner_id)
 
-        await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
-        if self.url_list:
-            await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
-                                   f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                                   '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
-        else:
-            await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
-                                   '추가된 상품이 없습니다.')
+        if self.init:
+            await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+
+            if self.url_list:
+                await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
+                                       f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
+                                       '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
+            else:
+                await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
+                                       '추가된 상품이 없습니다.')
+
+            self.init = False
 
     async def check_price(self):
         await asyncio.sleep(5)
