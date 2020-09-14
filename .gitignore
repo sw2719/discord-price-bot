@@ -128,3 +128,4 @@ dmypy.json
 # Added manually
 url.txt
 test/
+*.json

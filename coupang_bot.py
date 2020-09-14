@@ -23,7 +23,10 @@ def reset_cfg():
     default = {"bot_token": "",
                "user_id": "",
                "test_mode": False,
-               "interval": 60}
+               "interval": 60,
+               "login": False,
+               "email": "",
+               "pw": ""}
 
     with open('config.json', 'w') as f:
         f.write(json.dumps(default, indent=4))
@@ -41,6 +44,13 @@ else:
             TARGET_USER_ID = cfg['user_id']
             TEST_MODE = cfg['test_mode']
             INTERVAL = cfg['interval']
+            LOGIN = cfg['login']
+            EMAIL = cfg['email']
+            PW = cfg['pw']
+
+            POST_DATA = {'email': EMAIL,
+                         'password': PW,
+                         'rememberMe': 'false'}
 
             del cfg
     except KeyError:
@@ -53,6 +63,12 @@ class CoupangPriceBot(commands.Bot):
         self.init = True
         self.item_dict = {}
         self.header = {'User-Agent': USER_AGENT, 'Connection': 'keep-alive'}
+
+        self.login_header = {'User-Agent': USER_AGENT,
+                             'Connection': 'keep-alive',
+                             'DNT': '1',
+                             'Host': 'login.coupang.com',
+                             'Referer': 'https://login.coupang.com/login/login.pang'}
 
         try:
             with open('url.txt', 'r') as txt:
@@ -195,11 +211,12 @@ class CoupangPriceBot(commands.Bot):
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
-    async def fetch_coupang(self, url, return_value=False):
+    async def fetch_coupang(self, url, session, return_value=False):
         try:
-            async with aiohttp.ClientSession(headers=self.header) as session:
-                async with session.get(url) as r:
-                    soup = BeautifulSoup(await r.read(), 'html.parser')
+            async with session.get(url) as r:
+                text = await r.read()
+
+            soup = BeautifulSoup(text, 'html.parser')
 
             price_match = soup.select('span.total-price > strong')
             item_match = soup.find_all('h2', class_='prod-buy-header__title')
@@ -242,7 +259,14 @@ class CoupangPriceBot(commands.Bot):
         self.target = self.get_user(self.owner_id)
 
         if self.init:
-            await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+            async with aiohttp.ClientSession(headers=self.header) as session:
+                if LOGIN:
+                    print('Sending GET to login page...')
+                    await session.get('https://login.coupang.com/login/login.pang')
+
+                    print('Sending POST to loginProcess...')
+                    await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+                await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
             if self.url_list:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
@@ -261,7 +285,15 @@ class CoupangPriceBot(commands.Bot):
                 print('Test mode enabled')
                 last_dict = self.item_dict
                 self.item_dict = {}
-                await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+                async with aiohttp.ClientSession(headers=self.header) as session:
+                    if LOGIN:
+                        print('Sending GET to login page...')
+                        await session.get('https://login.coupang.com/login/login.pang')
+
+                        print('Sending POST to loginProcess...')
+                        await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+
+                    await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
                 for key, value in self.item_dict.items():
                     print(f'Sending {value["item_name"]} | {value["price"]} | {key}')
@@ -275,7 +307,16 @@ class CoupangPriceBot(commands.Bot):
                 try:
                     last_dict = self.item_dict
                     self.item_dict = {}
-                    await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+
+                    async with aiohttp.ClientSession(headers=self.header) as session:
+                        if LOGIN:
+                            print('Sending GET to login page...')
+                            await session.get('https://login.coupang.com/login/login.pang')
+
+                            print('Sending POST to loginProcess...')
+                            await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+
+                        await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
                     for key, value in self.item_dict.items():
                         try:
