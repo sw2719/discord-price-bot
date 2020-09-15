@@ -128,12 +128,20 @@ class CoupangPriceBot(commands.Bot):
                     return
 
                 if message.content == '취소':
-                    await ctx.send('삭제를 취소했습니다.')
+                    await ctx.send('추가를 취소했습니다.')
                     return
                 else:
                     url = message.content
 
-            result = await self.fetch_coupang(url, return_value=True)
+            async with aiohttp.ClientSession(headers=self.header) as session:
+                if LOGIN:
+                    print('Sending GET to login page...')
+                    await session.get('https://login.coupang.com/login/login.pang')
+
+                    print('Sending POST to loginProcess...')
+                    await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+
+                result = await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
             if result:
                 price, _, item_name = result
@@ -161,8 +169,15 @@ class CoupangPriceBot(commands.Bot):
                 await ctx.send('추가된 상품이 없습니다.')
                 return
 
-            tasks = [self.fetch_coupang(url) for url in self.url_list]
-            await asyncio.gather(*tasks)
+            async with aiohttp.ClientSession(headers=self.header) as session:
+                if LOGIN:
+                    print('Sending GET to login page...')
+                    await session.get('https://login.coupang.com/login/login.pang')
+
+                    print('Sending POST to loginProcess...')
+                    await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+
+                await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
             message_to_send = ["삭제할 상품의 번호를 입력하세요. (예시: 1)\n취소하려면 '취소'라고 입력하세요.\n"]
 
@@ -205,7 +220,16 @@ class CoupangPriceBot(commands.Bot):
         @self.command(name='list')
         async def list_(ctx):
             if self.url_list:
-                await asyncio.gather(*[self.fetch_coupang(url) for url in self.url_list])
+                async with aiohttp.ClientSession(headers=self.header) as session:
+                    if LOGIN:
+                        print('Sending GET to login page...')
+                        await session.get('https://login.coupang.com/login/login.pang')
+
+                        print('Sending POST to loginProcess...')
+                        await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
+
+                    await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
+
                 await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
                                '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
             else:
