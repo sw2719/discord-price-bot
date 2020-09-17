@@ -82,7 +82,7 @@ class CoupangPriceBot(commands.Bot):
                 if not re_output:
                     to_remove.append(url)
 
-                elif url != re_output.group():
+                elif url != re_output and 'vendorItemId' not in url:
                     to_remove.append(url)
                     self.url_list.append(re_output.group())
 
@@ -112,11 +112,11 @@ class CoupangPriceBot(commands.Bot):
                 await ctx.send('```명령어 도움말\n\n.add [상품 URL]\n봇에 해당 상품 URL을 추가합니다.\n\n.remove - 봇에서 상품을 제거합니다.\n\n.list - 추가된 상품 목록을 확인합니다.```')
 
         @self.command()
-        async def add(ctx, url=None):
+        async def add(ctx, input_url=None):
             if ctx.author.id != self.owner_id:
                 return
 
-            if url is None:
+            if input_url is None:
                 def check(message):
                     return message.author.id == self.owner_id
 
@@ -131,7 +131,22 @@ class CoupangPriceBot(commands.Bot):
                     await ctx.send('추가를 취소했습니다.')
                     return
                 else:
-                    url = message.content
+                    input_url = message.content
+
+            if 'm.coupang.com' in input_url:
+                url = input_url.replace('m.', '')
+
+            elif 'link.coupang.com' in input_url:
+                prod_id = re.findall('pageKey=[0-9]*', input_url)[0].split('=')[1]
+                vendor_id = re.findall('vendorItemId=[0-9]*', input_url)[0].split('=')[1]
+                url = f'https://www.coupang.com/vp/products/{prod_id}?{vendor_id}'
+
+            elif 'coupang.com' in input_url:
+                url = input_url
+
+            else:
+                await ctx.send('오류: 쿠팡 URL이 아닙니다.')
+                return
 
             async with aiohttp.ClientSession(headers=self.header) as session:
                 if LOGIN:
@@ -141,21 +156,27 @@ class CoupangPriceBot(commands.Bot):
                     print('Sending POST to loginProcess...')
                     await session.post('https://login.coupang.com/login/loginProcess.pang', headers=self.login_header, data=POST_DATA)
 
-                result = await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
+                result = await self.fetch_coupang(url, session, return_value=True)
+
+                print(result)
 
             if result:
-                price, _, item_name = result
+                price, _, item_name, option = result
             else:
-                ctx.send('오류: 올바르지 않은 URL이거나 현재 판매하지 않는 상품입니다.')
+                await ctx.send('오류: 올바르지 않은 URL이거나 현재 판매하지 않는 상품입니다.')
                 return
 
-            clean_url = url.split('?')[0]
+            try:
+                vendor_url = f"?vendorItemId={re.findall('vendorItemId=[0-9]*', input_url)[0].split('=')[1]}"
+            except Exception:
+                vendor_url = ''
 
+            clean_url = f"{url.split('?')[0]}{vendor_url}"
             if clean_url not in self.url_list:
                 self.url_list.append(clean_url)
                 self.save_url_list()
 
-                await ctx.send(f'{item_name} 상품이 추가되었습니다.\n현재 {price}')
+                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}')
             else:
                 await ctx.send('알림: 이미 추가된 URL입니다.')
 
@@ -231,7 +252,7 @@ class CoupangPriceBot(commands.Bot):
                     await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
                 await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
+                               '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}' for value in self.item_dict.values()]))
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
@@ -242,9 +263,15 @@ class CoupangPriceBot(commands.Bot):
 
             soup = BeautifulSoup(text, 'html.parser')
 
+            option = ''
             price_match = soup.select('span.total-price > strong')
             item_match = soup.find_all('h2', class_='prod-buy-header__title')
             item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
+
+            option_names = [re.sub('<[^<>]*>', '', str(option_name)) for option_name in soup.find_all('span', class_='title')]
+            option_values = [re.sub('<[^<>]*>', '', str(option_value)) for option_value in soup.find_all('span', class_='value')]
+            option = ' / '.join([f"{option_name}: {option_values[i]}" for i, option_name in enumerate(option_names)])
+            option_str = f' | {option}'
 
             if soup.find_all('div', class_='oos-label') or not price_match:
                 current_price = '품절'
@@ -256,18 +283,19 @@ class CoupangPriceBot(commands.Bot):
                 current_price = ''.join(price_output)
                 current_price_int = re.sub('[^0-9]', '', price_output[0])
 
-            print(f'Got price of {url} ({item_name}): {current_price_int}')
+            print(f'Got price of {url} ({item_name}): {current_price_int} {option}')
 
             if str(current_price) == '품절':
-                current_price = '*품절*'
+                current_price = '*품절*'  # 기울임체 적용
 
             if return_value and str(item_name):
-                return str(current_price), int(current_price_int), str(item_name)
+                return str(current_price), int(current_price_int), str(item_name), str(option)
             elif str(item_name):
                 self.item_dict[url] = {}
                 self.item_dict[url]['price'] = str(current_price)
                 self.item_dict[url]['price_int'] = int(current_price_int)
                 self.item_dict[url]['item_name'] = str(item_name)
+                self.item_dict[url]['option'] = str(option_str)
 
         except Exception as e:
             print(traceback.format_exc())
@@ -295,7 +323,7 @@ class CoupangPriceBot(commands.Bot):
             if self.url_list:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
                                        f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                                       '\n'.join([f'{value["item_name"]} - {value["price"]}' for value in self.item_dict.values()]))
+                                       '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}' for value in self.item_dict.values()]))
             else:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
                                        '추가된 상품이 없습니다.')
