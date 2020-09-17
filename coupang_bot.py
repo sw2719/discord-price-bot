@@ -158,8 +158,6 @@ class CoupangPriceBot(commands.Bot):
 
                 result = await self.fetch_coupang(url, session, return_value=True)
 
-                print(result)
-
             if result:
                 price, _, item_name, option = result
             else:
