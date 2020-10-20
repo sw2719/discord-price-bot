@@ -30,8 +30,9 @@ def reset_cfg():
 
     with open('config.json', 'w') as f:
         f.write(json.dumps(default, indent=4))
-        print('Created new config file. Please provide bot token and user id in it.')
-        sys.exit()
+
+    print('Created new config file. Please provide bot token and user id in it.')
+    sys.exit()
 
 
 if not os.path.isfile('config.json'):
@@ -48,11 +49,12 @@ else:
             EMAIL = cfg['email']
             PW = cfg['pw']
 
-            POST_DATA = {'email': EMAIL,
-                         'password': PW,
-                         'rememberMe': 'false'}
+        POST_DATA = {'email': EMAIL,
+                     'password': PW,
+                     'rememberMe': 'false'}
 
-            del cfg
+        del cfg
+
     except KeyError:
         reset_cfg()
 
@@ -66,7 +68,6 @@ class CoupangPriceBot(commands.Bot):
 
         self.login_header = {'User-Agent': USER_AGENT,
                              'Connection': 'keep-alive',
-                             'DNT': '1',
                              'Host': 'login.coupang.com',
                              'Referer': 'https://login.coupang.com/login/login.pang'}
 
@@ -306,6 +307,7 @@ class CoupangPriceBot(commands.Bot):
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
         self.owner_id = int(TARGET_USER_ID)
+        print('Target user ID is', self.owner_id)
         self.target = self.get_user(self.owner_id)
 
         if self.init:
