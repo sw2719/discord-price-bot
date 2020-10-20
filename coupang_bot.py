@@ -308,7 +308,14 @@ class CoupangPriceBot(commands.Bot):
         print(f'Logged in as {self.user.name} | {self.user.id}')
         self.owner_id = int(TARGET_USER_ID)
         print('Target user ID is', self.owner_id)
-        self.target = self.get_user(self.owner_id)
+
+        while True:
+            self.target = self.get_user(self.owner_id)
+            if self.target:
+                break
+            else:
+                asyncio.sleep(1)
+                continue
 
         if self.init:
             async with aiohttp.ClientSession(headers=self.header) as session:
