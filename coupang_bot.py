@@ -315,7 +315,7 @@ class CoupangPriceBot(commands.Bot):
                 break
             else:
                 print("Couldn't get user. Retrying!")
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
                 continue
 
         if self.init:
