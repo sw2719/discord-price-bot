@@ -306,6 +306,7 @@ class CoupangPriceBot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
+        await self.wait_until_ready()
         self.owner_id = int(TARGET_USER_ID)
         print('Target user ID is', self.owner_id)
 
