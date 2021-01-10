@@ -14,5 +14,6 @@
   - interval: 정보 확인 주기
   - login: 가격을 확인하기 전 로그인 할지 여부 (True로 설정시 email과 pw 값 설정 필요)
   - email/pw: 쿠팡 로그인 이메일 비밀번호 (login 설정 미사용시 불필요)
+* Discord 개발자 포털의 자신의 봇 항목에서 Privileged Gateway Intents에 있는 Server Members Intent를 켜줘야 제대로 작동합니다.
 
 * 자신의 서버로 봇을 초대하고, 봇을 구동하면 DM이 옵니다. (서버 구성원이 DM을 보내도록 허용한 서버에 봇을 초대해야 됩니다.)
