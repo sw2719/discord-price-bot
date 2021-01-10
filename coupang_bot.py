@@ -6,6 +6,7 @@ import os
 import logging
 import traceback
 import aiohttp
+from discord import Intents
 from discord.ext import commands
 from bs4 import BeautifulSoup
 
@@ -61,7 +62,9 @@ else:
 
 class CoupangPriceBot(commands.Bot):
     def __init__(self):
-        super().__init__('.')
+        intents = Intents.default()
+        intents.members = True
+        super().__init__('.', intents=intents)
         self.init = True
         self.item_dict = {}
         self.header = {'User-Agent': USER_AGENT, 'Connection': 'keep-alive'}
@@ -111,6 +114,17 @@ class CoupangPriceBot(commands.Bot):
         async def commands(ctx):
             if ctx.author.id == self.owner_id:
                 await ctx.send('```명령어 도움말\n\n.add [상품 URL]\n봇에 해당 상품 URL을 추가합니다.\n\n.remove - 봇에서 상품을 제거합니다.\n\n.list - 추가된 상품 목록을 확인합니다.```')
+
+        @self.command()
+        async def info(ctx):
+            await ctx.send(self.target.name)
+
+        @self.command()
+        async def me(ctx):
+            '''Used for debugging only'''
+            if ctx.author.id == self.owner_id:
+                self.target = ctx.author
+                await self.target.send('메시지 대상이 설정되었습니다.')
 
         @self.command()
         async def add(ctx, input_url=None):
@@ -309,13 +323,13 @@ class CoupangPriceBot(commands.Bot):
         await self.wait_until_ready()
         self.owner_id = int(TARGET_USER_ID)
         print('Target user ID is', self.owner_id)
+        self.target = self.get_user(self.owner_id)
 
         while True:
-            self.target = self.get_user(self.owner_id)
             if self.target:
                 break
             else:
-                print("Couldn't get user. Retrying!")
+                print("Couldn't get user!")
                 await asyncio.sleep(1)
                 continue
 
