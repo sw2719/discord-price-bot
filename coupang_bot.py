@@ -14,7 +14,8 @@ logging.basicConfig(level=logging.WARNING)
 
 print('Python version:', sys.version)
 
-if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):  # 파이썬 3.8 이상 & Windows 환경에서 실행하는 경우
+# 파이썬 3.8 이상 & Windows 환경에서 실행하는 경우
+if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
@@ -152,9 +153,10 @@ class CoupangPriceBot(commands.Bot):
                 url = input_url.replace('m.', '')
 
             elif 'link.coupang.com' in input_url:
-                prod_id = re.findall('pageKey=[0-9]*', input_url)[0].split('=')[1]
+                page_key = re.findall('pageKey=[0-9]*', input_url)[0].split('=')[1]
+                item_id = re.findall('itemId=[0-9]*', input_url)[0].split('=')[1]
                 vendor_id = re.findall('vendorItemId=[0-9]*', input_url)[0].split('=')[1]
-                url = f'https://www.coupang.com/vp/products/{prod_id}?{vendor_id}'
+                url = f'https://www.coupang.com/vp/products/{page_key}?itemId={item_id}&vendorItemId={vendor_id}'
 
             elif 'coupang.com' in input_url:
                 url = input_url
