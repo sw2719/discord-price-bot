@@ -122,7 +122,7 @@ class CoupangPriceBot(commands.Bot):
 
         @self.command()
         async def me(ctx):
-            '''Used for debugging only'''
+            """Used for debugging only"""
             if ctx.author.id == self.owner_id:
                 self.target = ctx.author
                 await self.target.send('메시지 대상이 설정되었습니다.')
@@ -176,7 +176,7 @@ class CoupangPriceBot(commands.Bot):
                 result = await self.fetch_coupang(url, session, return_value=True)
 
             if result:
-                price, _, item_name, option = result
+                price, _, item_name, option, benefit = result
             else:
                 await ctx.send('오류: 올바르지 않은 URL이거나 현재 판매하지 않는 상품입니다.')
                 return
@@ -191,7 +191,7 @@ class CoupangPriceBot(commands.Bot):
                 self.url_list.append(clean_url)
                 self.save_url_list()
 
-                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}')
+                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
             else:
                 await ctx.send('알림: 이미 추가된 URL입니다.')
 
@@ -267,7 +267,7 @@ class CoupangPriceBot(commands.Bot):
                     await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
                 await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}' for value in self.item_dict.values()]))
+                               '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
@@ -298,19 +298,25 @@ class CoupangPriceBot(commands.Bot):
                 current_price = ''.join(price_output)
                 current_price_int = re.sub('[^0-9]', '', price_output[0])
 
+            if soup.find('span', class_='benefit-label'):
+                benefit = ' (' + str(re.findall('[0-9]', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
+            else:
+                benefit = ''
+
             print(f'Got price of {url} ({item_name}): {current_price_int} {option}')
 
             if str(current_price) == '품절':
                 current_price = '*품절*'  # 기울임체 적용
 
             if return_value and str(item_name):
-                return str(current_price), int(current_price_int), str(item_name), str(option)
+                return str(current_price), int(current_price_int), str(item_name), str(option), benefit
             elif str(item_name):
                 self.item_dict[url] = {}
                 self.item_dict[url]['price'] = str(current_price)
                 self.item_dict[url]['price_int'] = int(current_price_int)
                 self.item_dict[url]['item_name'] = str(item_name)
                 self.item_dict[url]['option'] = str(option_str)
+                self.item_dict[url]['benefit'] = benefit
 
         except Exception as e:
             print(traceback.format_exc())
@@ -348,7 +354,7 @@ class CoupangPriceBot(commands.Bot):
             if self.url_list:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
                                        f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                                       '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}' for value in self.item_dict.values()]))
+                                       '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
             else:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
                                        '추가된 상품이 없습니다.')
@@ -397,8 +403,8 @@ class CoupangPriceBot(commands.Bot):
 
                     for key, value in self.item_dict.items():
                         try:
-                            if value['price_int'] != last_dict[key]['price_int']:
-                                await self.target.send(f'다음 상품의 상태가 변경되었습니다: {value["item_name"]}\n\n{last_dict[key]["price"]} -> {value["price"]}\n{key}')
+                            if value['price_int'] != last_dict[key]['price_int'] or value['benefit'] != last_dict[key]['benefit']:
+                                await self.target.send(f'다음 상품의 상태가 변경되었습니다: {value["item_name"]}\n\n{last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n{key}')
                         except KeyError:
                             pass
 
