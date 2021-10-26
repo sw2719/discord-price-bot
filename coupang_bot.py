@@ -301,7 +301,7 @@ class CoupangPriceBot(commands.Bot):
             if soup.find('span', class_='benefit-label'):
                 benefit = ' (' + str(re.findall('[0-9]', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
             else:
-                benefit = '없음'
+                benefit = ''
 
             if soup.find('div', class_='aos-label'):
                 aos_qty = str(soup.find('div', class_='aos-label'))
@@ -418,7 +418,7 @@ class CoupangPriceBot(commands.Bot):
                                 message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
                                 if value['price_int'] != last_dict[key]['price_int']:
                                     message_to_send += f'가격: {last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n'
-                                if value['benefit'] != last_dict[key]['benefit']:
+                                if value['benefit'] != last_dict[key]['benefit'] and value['benefit']:
                                     message_to_send += f'카드할인: {value["benefit"]}\n'
                                 if value['aos_qty'] != last_dict[key]['aos_qty'] and value['aos_qty']:
                                     message_to_send += value['aos_qty'] + '\n'
