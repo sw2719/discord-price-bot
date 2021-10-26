@@ -191,7 +191,7 @@ class CoupangPriceBot(commands.Bot):
                 self.url_list.append(clean_url)
                 self.save_url_list()
 
-                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
+                await ctx.send(f'{item_name} {option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
             else:
                 await ctx.send('알림: 이미 추가된 URL입니다.')
 
@@ -219,7 +219,7 @@ class CoupangPriceBot(commands.Bot):
 
             for i, url in enumerate(self.url_list):
                 index = i + 1
-                message_to_send.append(f"{str(index)}: {self.item_dict[url]['item_name']}")
+                message_to_send.append(f"{str(index)}: {self.item_dict[url]['item_name']} {self.item_dict[url]['option']}")
 
             await ctx.send('\n'.join(message_to_send))
 
@@ -244,7 +244,7 @@ class CoupangPriceBot(commands.Bot):
 
             remove_index = int(message.content) - 1
             remove_url = self.url_list[remove_index]
-            removed_item = self.item_dict[self.url_list[remove_index]]['item_name']
+            removed_item = f"{self.item_dict[self.url_list[remove_index]]['item_name']} {self.item_dict[self.url_list[remove_index]]['option']}"
 
             del self.item_dict[remove_url]
             del self.url_list[remove_index]
@@ -267,7 +267,7 @@ class CoupangPriceBot(commands.Bot):
                     await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
                 await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
+                               '\n'.join([f'{value["item_name"]} {value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
@@ -301,7 +301,12 @@ class CoupangPriceBot(commands.Bot):
             if soup.find('span', class_='benefit-label'):
                 benefit = ' (' + str(re.findall('[0-9]', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
             else:
-                benefit = ''
+                benefit = '없음'
+
+            if soup.find('div', class_='aos-label'):
+                aos_qty = str(soup.find('div', class_='aos-label'))
+            else:
+                aos_qty = ''
 
             print(f'Got price of {url} ({item_name}): {current_price_int} {option}')
 
@@ -317,6 +322,7 @@ class CoupangPriceBot(commands.Bot):
                 self.item_dict[url]['item_name'] = str(item_name)
                 self.item_dict[url]['option'] = str(option_str)
                 self.item_dict[url]['benefit'] = benefit
+                self.item_dict[url]['aos_qty'] = aos_qty
 
         except Exception as e:
             print(traceback.format_exc())
@@ -403,8 +409,21 @@ class CoupangPriceBot(commands.Bot):
 
                     for key, value in self.item_dict.items():
                         try:
-                            if value['price_int'] != last_dict[key]['price_int'] or value['benefit'] != last_dict[key]['benefit']:
-                                await self.target.send(f'다음 상품의 상태가 변경되었습니다: {value["item_name"]}\n\n{last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n{key}')
+                            if value != last_dict[key]:
+                                message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
+                                if value['price_int'] != last_dict[key]['price_int']:
+                                    message_to_send += f'{last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n{key}'
+                                
+                            if value != last_dict[key]:
+                                message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
+                                if value['price_int'] != last_dict[key]['price_int']:
+                                    message_to_send += f'가격: {last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n'
+                                if value['benefit'] != last_dict[key]['benefit']:
+                                    message_to_send += f'카드할인: {value["benefit"]}\n'
+                                if value['aos_qty'] != last_dict[key]['aos_qty'] and value['aos_qty']:
+                                    message_to_send += value['aos_qty'] + '\n'
+                                message_to_send += '\n' + key
+                                await self.target.send(message_to_send)
                         except KeyError:
                             pass
 
