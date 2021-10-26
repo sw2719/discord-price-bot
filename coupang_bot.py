@@ -409,12 +409,7 @@ class CoupangPriceBot(commands.Bot):
 
                     for key, value in self.item_dict.items():
                         try:
-                            if value != last_dict[key]:
-                                message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
-                                if value['price_int'] != last_dict[key]['price_int']:
-                                    message_to_send += f'{last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n{key}'
-                                
-                            if value != last_dict[key]:
+                            if (value['price_int'], value['benefit'], value['aos_qty']) != (last_dict['price_int'], last_dict['benefit'], last_dict['aos_qty']):
                                 message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
                                 if value['price_int'] != last_dict[key]['price_int']:
                                     message_to_send += f'가격: {last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n'
