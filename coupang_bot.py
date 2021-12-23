@@ -295,12 +295,13 @@ class CoupangPriceBot(commands.Bot):
                 current_price_int = 0
 
             else:
-                if len(price_match) > 1 and USE_WOW_PRICE:
-                    index = 1
+                if USE_WOW_PRICE:
+                    try:
+                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
+                    except ValueError:
+                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
                 else:
-                    index = 0
-
-                price_output = [element for element in re.split('<[^<>]*>', str(price_match[index])) if element.strip()]
+                    price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
 
                 current_price = ''.join(price_output)
                 current_price_int = re.sub('[^0-9]', '', price_output[0])
