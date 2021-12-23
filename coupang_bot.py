@@ -280,7 +280,6 @@ class CoupangPriceBot(commands.Bot):
 
             soup = BeautifulSoup(text, 'html.parser')
 
-            option = ''
             price_match = soup.select('span.total-price > strong')
             item_match = soup.find_all('h2', class_='prod-buy-header__title')
             item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
@@ -288,7 +287,10 @@ class CoupangPriceBot(commands.Bot):
             option_names = [re.sub('<[^<>]*>', '', str(option_name)) for option_name in soup.find_all('span', class_='title')]
             option_values = [re.sub('<[^<>]*>', '', str(option_value)) for option_value in soup.find_all('span', class_='value')]
             option = ' / '.join([f"{option_name}: {option_values[i]}" for i, option_name in enumerate(option_names)])
-            option_str = f' | {option}'
+            if option:
+                option_str = f' | {option}'
+            else:
+                option_str = ''
 
             if soup.find_all('div', class_='oos-label') or not price_match:
                 current_price = '품절'
@@ -297,7 +299,7 @@ class CoupangPriceBot(commands.Bot):
             else:
                 if USE_WOW_PRICE:
                     price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
-                    if price_output == '원':
+                    if price_output == ['원']:
                         price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if
                                         element.strip()]
                 else:
