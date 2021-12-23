@@ -24,6 +24,7 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 def reset_cfg():
     default = {"bot_token": "",
                "user_id": "",
+               "use_wow_price": True,
                "test_mode": False,
                "interval": 60,
                "login": False,
@@ -45,6 +46,7 @@ else:
             cfg = json.loads(f.read())
             TOKEN = cfg['bot_token']
             TARGET_USER_ID = cfg['user_id']
+            USE_WOW_PRICE = cfg['use_wow_price']
             TEST_MODE = cfg['test_mode']
             INTERVAL = cfg['interval']
             LOGIN = cfg['login']
@@ -293,13 +295,18 @@ class CoupangPriceBot(commands.Bot):
                 current_price_int = 0
 
             else:
-                price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
+                if len(price_match) > 1 and USE_WOW_PRICE:
+                    index = 1
+                else:
+                    index = 0
+
+                price_output = [element for element in re.split('<[^<>]*>', str(price_match[index])) if element.strip()]
 
                 current_price = ''.join(price_output)
                 current_price_int = re.sub('[^0-9]', '', price_output[0])
 
             if soup.find('span', class_='benefit-label'):
-                benefit = ' (' + str(re.findall('[0-9]', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
+                benefit = ' (' + str(re.findall('[0-9]*', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
             else:
                 benefit = ''
 
