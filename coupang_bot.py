@@ -296,10 +296,10 @@ class CoupangPriceBot(commands.Bot):
 
             else:
                 if USE_WOW_PRICE:
-                    try:
-                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
-                    except ValueError:
-                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
+                    price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
+                    if price_output == '원':
+                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if
+                                        element.strip()]
                 else:
                     price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
 
