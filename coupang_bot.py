@@ -340,7 +340,7 @@ class CoupangPriceBot(commands.Bot):
             if return_value:
                 return False
             else:
-                await self.target.send(f'다음 상품의 가격을 불러오는 도중 오류가 발생했습니다: {url}\n{e}')
+                await self.target.send(f'다음 상품의 가격을 불러오는 도중 오류가 발생했습니다: {url}\n{traceback.format_exc()}\n{e}')
 
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
