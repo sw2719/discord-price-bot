@@ -286,7 +286,7 @@ class CoupangPriceBot(commands.Bot):
             try:
                 item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
             except IndexError:
-                print("Couldn't get item name. Aborting this cycle...")
+                print(f"Couldn't get item name for {url}. Aborting this cycle...")
                 return
 
             option_names = [re.sub('<[^<>]*>', '', str(option_name)) for option_name in soup.find_all('span', class_='title')]
