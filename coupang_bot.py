@@ -282,7 +282,11 @@ class CoupangPriceBot(commands.Bot):
 
             price_match = soup.select('span.total-price > strong')
             item_match = soup.find_all('h2', class_='prod-buy-header__title')
-            item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
+
+            try:
+                item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
+            except IndexError:
+                print("Couldn't get item name. Aborting this cycle...")
 
             option_names = [re.sub('<[^<>]*>', '', str(option_name)) for option_name in soup.find_all('span', class_='title')]
             option_values = [re.sub('<[^<>]*>', '', str(option_value)) for option_value in soup.find_all('span', class_='value')]
@@ -402,7 +406,7 @@ class CoupangPriceBot(commands.Bot):
 
         else:
             while not self.is_closed():
-                print('Starting price check...')
+                print('Starting price check cycle...')
                 try:
                     last_dict = self.item_dict
                     self.item_dict = {}
@@ -432,7 +436,7 @@ class CoupangPriceBot(commands.Bot):
                         except KeyError:
                             pass
 
-                    print('Price check ended successfully.')
+                    print('Price check cycle ended.')
                     await asyncio.sleep(INTERVAL)
 
                 except Exception as e:
