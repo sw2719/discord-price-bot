@@ -319,9 +319,11 @@ class CoupangPriceBot(commands.Bot):
                 benefit = ''
 
             if soup.find('div', class_='aos-label'):
-                aos_qty = str(soup.find('div', class_='aos-label'))
+                aos_qty = re.sub(r'<[^<>]*>', '', str(soup.find('div', class_='aos-label')))
+            elif str(current_price) == '품절':
+                aos_qty = '재고 없음'
             else:
-                aos_qty = ''
+                aos_qty = '재고 있음'
 
             print(f'Got price of {url} ({item_name}): {current_price_int} {option}')
 
@@ -431,7 +433,7 @@ class CoupangPriceBot(commands.Bot):
                                 if value['benefit'] != last_dict[key]['benefit'] and value['benefit']:
                                     message_to_send += f'카드할인: {value["benefit"]}\n'
                                 if value['aos_qty'] != last_dict[key]['aos_qty'] and value['aos_qty']:
-                                    message_to_send += value['aos_qty'] + '\n'
+                                    message_to_send += f'재고: {value["aos_qty"]}\n'
                                 message_to_send += '\n' + key
                                 await self.target.send(message_to_send)
                         except KeyError:
