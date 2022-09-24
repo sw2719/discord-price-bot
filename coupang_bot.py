@@ -6,8 +6,8 @@ import os
 import logging
 import traceback
 import aiohttp
-from discord import Intents
-from discord.ext import commands
+from disnake import Intents
+from disnake.ext import commands
 from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.WARNING)
@@ -18,7 +18,7 @@ print('Python version:', sys.version)
 if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36'  # 유저 에이전트
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'  # 유저 에이전트
 
 
 def reset_cfg():
@@ -70,10 +70,21 @@ class CoupangPriceBot(commands.Bot):
         super().__init__('.', intents=intents)
         self.init = True
         self.item_dict = {}
-        self.header = {'User-Agent': USER_AGENT, 'Connection': 'keep-alive'}
+        self.header = {'user-agent': USER_AGENT,
+                       'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                       'accept-encoding': 'gzip, deflate, br',
+                       'accept-language': 'ko-KR,ko;q=0.9',
+                       'connection': 'keep-alive',
+                       'cache-control': 'max-age=0',
+                       'upgrade-insecure-requests': '1'}
 
-        self.login_header = {'User-Agent': USER_AGENT,
-                             'Connection': 'keep-alive',
+        self.login_header = {'user-agent': USER_AGENT,
+                             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+                             'accept-encoding': 'gzip, deflate, br',
+                             'accept-language': 'ko-KR,ko;q=0.9',
+                             'connection': 'keep-alive',
+                             'cache-control': 'max-age=0',
+                             'upgrade-insecure-requests': '1',
                              'Host': 'login.coupang.com',
                              'Referer': 'https://login.coupang.com/login/login.pang'}
 
