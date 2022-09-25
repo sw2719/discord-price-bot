@@ -325,7 +325,14 @@ class CoupangPriceBot(commands.Bot):
                 current_price_int = re.sub('[^0-9]', '', price_output[0])
 
             if soup.find('span', class_='benefit-label'):
-                benefit = ' (' + str(re.findall('[0-9]*', str(soup.find('span', class_='benefit-label')))[0]) + '% 카드할인)'
+                highest = 0
+                for element in soup.find_all('span', class_='benefit-label'):
+                    perc = int(''.join(filter(str.isdigit, str(element))))
+
+                    if perc > highest:
+                        highest = perc
+
+                benefit = f'최대 {str(highest)}%'
             else:
                 benefit = ''
 
@@ -440,10 +447,10 @@ class CoupangPriceBot(commands.Bot):
                             if (value['price_int'], value['benefit'], value['aos_qty']) != (last_dict[key]['price_int'], last_dict[key]['benefit'], last_dict[key]['aos_qty']):
                                 message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
                                 if value['price_int'] != last_dict[key]['price_int']:
-                                    message_to_send += f'가격: {last_dict[key]["price"]}{last_dict[key]["benefit"]} -> {value["price"]}{value["benefit"]}\n'
-                                if value['benefit'] != last_dict[key]['benefit'] and value['benefit']:
-                                    message_to_send += f'카드할인: {value["benefit"]}\n'
-                                if value['aos_qty'] != last_dict[key]['aos_qty'] and value['aos_qty']:
+                                    message_to_send += f'가격: {last_dict[key]["price"]} -> {value["price"]}\n'
+                                if value['benefit'] != last_dict[key]['benefit'] and value['benefit'] or value['benefit']:
+                                    message_to_send += f'카드 할인: {value["benefit"]}\n'
+                                if value['aos_qty'] != last_dict[key]['aos_qty'] and value['aos_qty'] or value['aos_qty'] != '재고 있음':
                                     message_to_send += f'재고: {value["aos_qty"]}\n'
                                 message_to_send += '\n' + key
                                 await self.target.send(message_to_send)
