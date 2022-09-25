@@ -204,7 +204,7 @@ class CoupangPriceBot(commands.Bot):
                 self.url_list.append(clean_url)
                 self.save_url_list()
 
-                await ctx.send(f'{item_name} {option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
+                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
             else:
                 await ctx.send('알림: 이미 추가된 URL입니다.')
 
@@ -232,7 +232,7 @@ class CoupangPriceBot(commands.Bot):
 
             for i, url in enumerate(self.url_list):
                 index = i + 1
-                message_to_send.append(f"{str(index)}: {self.item_dict[url]['item_name']} {self.item_dict[url]['option']}")
+                message_to_send.append(f"{str(index)}: {self.item_dict[url]['item_name']}{self.item_dict[url]['option']}")
 
             await ctx.send('\n'.join(message_to_send))
 
@@ -279,8 +279,17 @@ class CoupangPriceBot(commands.Bot):
 
                     await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
-                await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                               '\n'.join([f'{value["item_name"]} {value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
+                message_to_send = ''
+                for i, value in enumerate(self.item_dict.values()):
+                    message_to_send += f'{value["item_name"]}{value["option"]} - {value["price"]}'
+
+                    if value["benefit"]:
+                        message_to_send += f' ({value["benefit"]} 카드 할인)'
+
+                    if i != len(self.item_dict) - 1:
+                        message_to_send += '\n'
+
+                await ctx.send(f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' + message_to_send)
             else:
                 await ctx.send('추가된 상품이 없습니다.')
 
