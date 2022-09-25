@@ -402,9 +402,19 @@ class CoupangPriceBot(commands.Bot):
                 await asyncio.gather(*[self.fetch_coupang(url, session) for url in self.url_list])
 
             if self.url_list:
+                message_to_send = ''
+                for i, value in enumerate(self.item_dict.values()):
+                    message_to_send += f'{value["item_name"]}{value["option"]} - {value["price"]}'
+
+                    if value["benefit"]:
+                        message_to_send += f' ({value["benefit"]} 카드 할인)'
+
+                    if i != len(self.item_dict) - 1:
+                        message_to_send += '\n'
+
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n" +
                                        f'{str(len(self.url_list))} 개의 상품을 감시 중입니다.\n\n' +
-                                       '\n'.join([f'{value["item_name"]}{value["option"]} - {value["price"]}{value["benefit"]}' for value in self.item_dict.values()]))
+                                       message_to_send)
             else:
                 await self.target.send("봇이 시작되었습니다. 명령어 목록을 보려면 '.commands'를 입력하세요.\n\n" +
                                        '추가된 상품이 없습니다.')
