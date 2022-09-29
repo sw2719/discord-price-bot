@@ -189,7 +189,7 @@ class CoupangPriceBot(commands.Bot):
                 result = await self.fetch_coupang(url, session, return_value=True)
 
             if result:
-                price, _, item_name, option, benefit = result
+                price, _, item_name, option, benefit, aos_qty, preorder = result
             else:
                 await ctx.send('오류: 올바르지 않은 URL이거나 현재 판매하지 않는 상품입니다.')
                 return
@@ -204,7 +204,14 @@ class CoupangPriceBot(commands.Bot):
                 self.url_list.append(clean_url)
                 self.save_url_list()
 
-                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{benefit}')
+                if benefit:
+                    benefit = f'\n{benefit} 카드 할인'
+                if preorder:
+                    preorder_text = '\n사전예약 중'
+                else:
+                    preorder_text = ''
+
+                await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{preorder_text}{benefit}{aos_qty}')
             else:
                 await ctx.send('알림: 이미 추가된 URL입니다.')
 
@@ -363,7 +370,7 @@ class CoupangPriceBot(commands.Bot):
                 current_price = '*품절*'  # 기울임체 적용
 
             if return_value and str(item_name):
-                return str(current_price), int(current_price_int), str(item_name), str(option), benefit
+                return str(current_price), int(current_price_int), str(item_name), str(option), benefit, aos_qty, preorder
             elif str(item_name):
                 self.item_dict[url] = {}
                 self.item_dict[url]['price'] = str(current_price)
@@ -414,6 +421,10 @@ class CoupangPriceBot(commands.Bot):
 
                     if value["benefit"]:
                         message_to_send += f' ({value["benefit"]} 카드 할인)'
+                    if value["aos_qty"] != '재고 있음':
+                        message_to_send += f' ({value["aos_qty"]})'
+                    if value["preorder"]:
+                        message_to_send += ' (사전예약중)'
 
                     if i != len(self.item_dict) - 1:
                         message_to_send += '\n'
