@@ -210,6 +210,7 @@ class CoupangPriceBot(commands.Bot):
                     preorder_text = '\n사전예약 중'
                 else:
                     preorder_text = ''
+                aos_qty = f'\n{aos_qty}'
 
                 await ctx.send(f'{item_name}{option} 상품이 추가되었습니다.\n현재 {price}{preorder_text}{benefit}{aos_qty}')
             else:
