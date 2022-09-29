@@ -352,6 +352,11 @@ class CoupangPriceBot(commands.Bot):
             else:
                 aos_qty = '재고 있음'
 
+            if soup.find('span', class_='prod-pre-order-badge-text'):
+                preorder = True
+            else:
+                preorder = False
+
             print(f'Got price of {url} ({item_name}): {current_price_int} {option}')
 
             if str(current_price) == '품절':
@@ -367,6 +372,7 @@ class CoupangPriceBot(commands.Bot):
                 self.item_dict[url]['option'] = str(option_str)
                 self.item_dict[url]['benefit'] = benefit
                 self.item_dict[url]['aos_qty'] = aos_qty
+                self.item_dict[url]['preorder'] = preorder
 
         except Exception as e:
             print(traceback.format_exc())
@@ -463,8 +469,10 @@ class CoupangPriceBot(commands.Bot):
 
                     for key, value in self.item_dict.items():
                         try:
-                            if (value['price_int'], value['benefit'], value['aos_qty']) != (last_dict[key]['price_int'], last_dict[key]['benefit'], last_dict[key]['aos_qty']):
+                            if (value['price_int'], value['benefit'], value['aos_qty'], value['preorder']) != (last_dict[key]['price_int'], last_dict[key]['benefit'], last_dict[key]['aos_qty'], last_dict[key]['preorder']):
                                 message_to_send = f'다음 상품의 상태가 변경되었습니다: {value["item_name"]} {value["option"]}\n\n'
+                                if value['preorder']:
+                                    message_to_send += f'현재 사전예약 중\n'
                                 if value['price_int'] != last_dict[key]['price_int']:
                                     message_to_send += f'가격: {last_dict[key]["price"]} -> {value["price"]}\n'
                                 if value['benefit'] != last_dict[key]['benefit'] and value['benefit'] or value['benefit']:
