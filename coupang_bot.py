@@ -360,7 +360,7 @@ class CoupangPriceBot(commands.Bot):
             else:
                 aos_qty = '재고 있음'
 
-            if soup.find('span', class_='prod-pre-order-badge-text'):
+            if soup.find('span', class_='prod-pre-order-badge-text').string:
                 preorder = True
             else:
                 preorder = False
