@@ -1,10 +1,6 @@
 # CoupangWishlistDiscordBot
 상품 페이지 URL을 입력해두면 가격 변동/할인/품절/재입고시 디스코드로 알려주는 디스코드 봇입니다.
 
-# TODO
-* 디스코드 서버 지원
-* 사전예약 
-
 # 사용 방법
 * 먼저 의존성을 설치합니다. (requirements.txt 참조)
 * 봇을 1회 실행 후 생성된 config.json에 설정 값을 입력합니다.
