@@ -304,7 +304,7 @@ class CoupangPriceBot(commands.Bot):
     async def fetch_coupang(self, url, session, return_value=False):
         try:
             async with session.get(url) as r:
-                text = await r.read()
+                text = await r.text()
 
             soup = BeautifulSoup(text, 'html.parser')
 
@@ -331,10 +331,15 @@ class CoupangPriceBot(commands.Bot):
 
             else:
                 if USE_WOW_PRICE:
-                    price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
-                    if price_output == ['원']:
+                    try:
+                        price_output = [element for element in re.split('<[^<>]*>', str(price_match[1])) if element.strip()]
+                        if price_output == ['원']:
+                            raise IndexError
+
+                    except IndexError:
                         price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if
                                         element.strip()]
+
                 else:
                     price_output = [element for element in re.split('<[^<>]*>', str(price_match[0])) if element.strip()]
 
