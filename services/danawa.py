@@ -28,11 +28,7 @@ class DanawaService(BaseService):
     SERVICE_NAME = 'danawa'
     SERVICE_LABEL = '다나와'
     SERVICE_COLOR = 0x5EC946
-    SERVICE_ICON = get_favicon('https://www.danawa.com/',
-                               headers={
-                                   'User-Agent': USER_AGENT
-                               })
-
+    SERVICE_ICON = 'https://img.danawa.com/new/tour/img/logo/sns_danawa.jpg'
     def __init__(self):
         logger.info('Danawa service initialized.')
 
