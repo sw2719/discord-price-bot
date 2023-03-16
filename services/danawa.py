@@ -1,6 +1,7 @@
 import logging
 import asyncio
 import aiohttp
+import ssl
 from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
@@ -9,6 +10,9 @@ from util.favicon import get_favicon
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+context.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
 
 
 class DanawaItem(BaseServiceItem):
@@ -35,7 +39,7 @@ class DanawaService(BaseService):
     async def standardize_url(self, url: str) -> Union[str, None]:
         if 'danawa.page.link' in url:  # Mobile App Share URL to Mobile Web URL
             async with aiohttp.ClientSession() as session:
-                async with session.get(url) as r:
+                async with session.get(url, ssl=context) as r:
                     url = str(r.url)
 
         f = furl(url)
@@ -63,7 +67,7 @@ class DanawaService(BaseService):
             async with aiohttp.ClientSession() as session:
                 return await self.get_product_info(url, session)
 
-        async with session.get(url) as r:
+        async with session.get(url, ssl=context) as r:
             text = await r.text()
             r.raise_for_status()
 
