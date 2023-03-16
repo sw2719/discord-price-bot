@@ -98,6 +98,8 @@ class DanawaService(BaseService):
                 )
                 card_price_card = card_price_card.contents[0]
                 card_price = f'{card_price.contents[0]}원 ({card_price_card})'
+            else:
+                card_price = ''
 
         item = DanawaItem(
             name=prod_name,
