@@ -1,3 +1,5 @@
 aiohttp
+requests
 disnake
 bs4
+furl

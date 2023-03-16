@@ -7,12 +7,13 @@ import traceback
 import disnake as ds
 from disnake.ext import commands
 from typing import Union
+from copy import deepcopy
 
-from services.base import BaseService, BaseServiceItem
 from services.coupang import CoupangService
+from services.danawa import DanawaService
 
 # Add service class here to add new service
-SERVICES = (CoupangService,)
+SERVICES = (CoupangService, DanawaService)
 
 
 def reset_cfg():
@@ -23,10 +24,11 @@ def reset_cfg():
                }
 
     for service in SERVICES:
-        default[service.SERVICE_NAME] = service.SERVICE_DEFAULT_CONFIG
+        if service.SERVICE_DEFAULT_CONFIG is not None:
+            default[service.SERVICE_NAME] = service.SERVICE_DEFAULT_CONFIG
 
-    with open('config.json', 'w') as f:
-        f.write(json.dumps(default, indent=4))
+    with open('config.json', 'w') as new_file:
+        new_file.write(json.dumps(default, indent=4))
 
     sys.exit(1)
 
@@ -42,12 +44,7 @@ class DiscordPriceBot(commands.Bot):
         self.init = True
         self.owner_id = int(cfg['user_id'])
         self.owner = None
-        self.url_dict = {}
         self.item_dict = {}
-
-        for service in SERVICES:
-            self.url_dict[service.SERVICE_NAME] = []
-            self.item_dict[service.SERVICE_NAME] = {}
 
         try:
             with open('url.json', 'r') as f:
@@ -55,17 +52,28 @@ class DiscordPriceBot(commands.Bot):
 
         except (FileNotFoundError, json.JSONDecodeError):
             logger.warning('URL json file not found or invalid. Creating one')
+            self.url_dict = {}
 
             with open('url.json', 'w') as f:
                 json.dump(self.url_dict, f, indent=4)
 
+        for service in SERVICES:
+            if service.SERVICE_NAME not in self.url_dict:
+                self.url_dict[service.SERVICE_NAME] = []
+
+            self.item_dict[service.SERVICE_NAME] = {}
+
         self.services = {}
 
         for service in SERVICES:
-            self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME], logger)
+            if service.SERVICE_DEFAULT_CONFIG is not None:
+                self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME])
+            else:
+                self.services[service.SERVICE_NAME] = service()
 
         self.command_busy = False
 
+        asyncio.run(self.update_item_dict())
         self.add_bot_commands()
         self.bg_task = self.loop.create_task(self.check_price())
 
@@ -102,7 +110,6 @@ class DiscordPriceBot(commands.Bot):
 
     async def on_command_error(self, ctx: commands.Context, exception: commands.CommandError) -> None:
         self.command_busy = False
-        raise exception
         title = '명령어 실패'
 
         tb = str(traceback.format_exception(type(exception), exception, exception.__traceback__))
@@ -126,6 +133,7 @@ class DiscordPriceBot(commands.Bot):
 
     def add_bot_commands(self):
         self.remove_command('help')
+
         @self.command(name='help')
         async def help_(ctx):
             if not await self.check_command_eligibility(ctx):
@@ -151,7 +159,7 @@ class DiscordPriceBot(commands.Bot):
 
                 try:
                     await ctx.send(embed=await self.get_embed('상품 추가', '추가할 상품의 URL을 입력하세요.',
-                                                        footer="취소하려면 '취소'를 입력하세요."))
+                                   footer="취소하려면 '취소'를 입력하세요."))
                     message = await self.wait_for('message', timeout=30.0, check=check)
                 except asyncio.TimeoutError:
                     await ctx.send(embed=await self.get_embed('추가 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
@@ -197,10 +205,11 @@ class DiscordPriceBot(commands.Bot):
             for key, entry in item_info.items():
                 value = entry['value']
 
-                if key == 'price':
-                    value = f'{value:,}'
-                elif key == 'thumbnail':
+                if key == 'thumbnail':
                     embed.set_thumbnail(url=value)
+                    continue
+
+                if not value:
                     continue
 
                 try:
@@ -208,8 +217,12 @@ class DiscordPriceBot(commands.Bot):
 
                     if entry['type'] is list:
                         value = ', '.join(value)
-                    elif 'unit' in entry:
-                        value = f'{value}{entry["unit"]}'
+                    elif entry['type'] is dict:
+                        string_list = []
+                        for value_key, value_value in value.items():
+                            string_list.append(f'{value_key}: {value_value}')
+
+                        value = '\n'.join(string_list)
 
                     embed.add_field(name=label, value=value, inline=False)
                 except KeyError:
@@ -332,6 +345,8 @@ class DiscordPriceBot(commands.Bot):
                     for option_label, option in removed_item['option'].items():
                         embed.add_field(name=option_label, value=option, inline=False)
 
+                embed.add_field(name='URL', value=remove_url, inline=False)
+
                 await ctx.send(embed=embed)
                 await self.update_item_dict()
                 return
@@ -438,10 +453,11 @@ class DiscordPriceBot(commands.Bot):
                 for key, entry in selected_item.items():
                     value = entry['value']
 
-                    if key == 'price':
-                        value = f'{value:,}'
-                    elif key == 'thumbnail':
+                    if key == 'thumbnail':
                         embed.set_thumbnail(url=value)
+                        continue
+
+                    if not value:
                         continue
 
                     try:
@@ -449,8 +465,12 @@ class DiscordPriceBot(commands.Bot):
 
                         if entry['type'] is list:
                             value = ', '.join(value)
-                        elif 'unit' in entry:
-                            value = f'{value}{entry["unit"]}'
+                        elif entry['type'] is dict:
+                            string_list = []
+                            for value_key, value_value in value.items():
+                                string_list.append(f'{value_key}: {value_value}')
+
+                            value = '\n'.join(string_list)
 
                         embed.add_field(name=label, value=value, inline=False)
                     except KeyError:
@@ -479,15 +499,21 @@ class DiscordPriceBot(commands.Bot):
                         item = self.item_dict[service_name][url]
 
                         options = []
-                        if item['option']:
-                            for i, (option_name, option) in enumerate(item['option'].items()):
-                                options.append(f"{option_name}: {option}")
+                        try:
+                            if item['option']:
+                                for i, (option_name, option) in enumerate(item['option'].items()):
+                                    options.append(f"{option_name}: {option}")
 
-                        options_string = '\n'.join(options)
+                                options_string = '\n' + '\n'.join(options)
+                            else:
+                                options_string = ''
+                        except KeyError:
+                            options_string = ''
 
                         embed.add_field(
                             name=item['name'],
-                            value=f"{str(format(int(item['price']), ','))}원\n{options_string}"
+                            value=f"{item['price']}{options_string}",
+                            inline=False
                         )
 
                     embeds.append(embed)
@@ -537,11 +563,10 @@ class DiscordPriceBot(commands.Bot):
                 logger.info('Starting price check cycle...')
                 try:
                     last_dict = self.item_dict
-                    self.item_dict = {}
-
                     await self.update_item_dict()
+                    current_dict = deepcopy(self.item_dict)
 
-                    for service_name, service_item_dict in self.item_dict.items():
+                    for service_name, service_item_dict in current_dict.items():
                         try:
                             for url, item in service_item_dict.items():
                                 last_item = last_dict[service_name][url]
@@ -554,23 +579,62 @@ class DiscordPriceBot(commands.Bot):
                                          color=self.services[service_name].SERVICE_COLOR
                                     )
 
-                                    for key, value in item.items():
-                                        label = value['label']
-                                        item_value = value['value']
+                                    for key, entry in item.items():
+                                        item_value = entry['value']
                                         last_value = last_item[key]
 
-                                        if key == 'price':
-                                            item_value = f"{item_value:,}원"
-                                            last_value = f"{last_item[key]['value']:,}원"
-                                        elif key == 'thumbnail':
+                                        item_value_string = item_value
+                                        last_value_string = last_value
+
+                                        if key == 'thumbnail':
                                             embed.set_thumbnail(url=item_value)
                                             continue
 
-                                        if value != last_item[key]:
-                                            embed.add_field(name=label, value=f'{last_value} -> {item_value}', inline=False)
-                                        else:
-                                            embed.add_field(name=label, value=item_value, inline=False)
+                                        try:
+                                            label = entry['label']
 
+                                            if entry['type'] is list:
+                                                item_value_string = ', '.join(item_value)
+                                                last_value_string = ', '.join(last_value)
+                                            elif entry['type'] is dict:
+                                                string_list = []
+                                                last_string_list = []
+                                                for value_key, value_value in item_value.items():
+                                                    string_list.append(f'{value_key}: {value_value}')
+
+                                                for last_value_key, last_value_value in last_value.items():
+                                                    last_string_list.append(f'{last_value_key}: {last_value_value}')
+
+                                                item_value_string = ' / '.join(string_list)
+                                                last_value_string = ' / '.join(last_string_list)
+
+                                            if item_value != last_item[key]:
+                                                if not item_value:
+                                                    item_value_string = '없음'
+                                                if not last_value:
+                                                    last_value_string = '없음'
+
+                                                embed.add_field(
+                                                    name=label,
+                                                    value=f'{last_value_string} -> {item_value_string}',
+                                                    inline=False)
+                                            else:
+                                                if item_value:
+                                                    embed.add_field(name=label, value=item_value_string, inline=False)
+
+                                        except KeyError:
+                                            if entry['type'] is dict:
+                                                for option_label, option in item_value.items():
+                                                    if option != last_value[option_label]:
+                                                        embed.add_field(
+                                                            name=option_label,
+                                                            value=f'{last_value[option_label]} -> {option}',
+                                                            inline=False
+                                                        )
+                                                    else:
+                                                        embed.add_field(name=option_label, value=option, inline=False)
+
+                                    embed.add_field(name='URL', value=url, inline=False)
                                     await self.owner.send(embed=embed)
 
                         except KeyError:  # New items
@@ -586,13 +650,8 @@ class DiscordPriceBot(commands.Bot):
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger()
-    log_format = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.INFO)
-    stream_handler.setFormatter(log_format)
-    logger.addHandler(stream_handler)
+    logger = logging.getLogger('bot')
+    logger.setLevel(logging.INFO)
 
     print('Python version:', sys.version)
 

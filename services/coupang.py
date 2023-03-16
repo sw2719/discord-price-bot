@@ -1,13 +1,15 @@
-import aiohttp
 import re
 import logging
 import asyncio
+import aiohttp
+from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
-from typing import Union, Tuple
-from services.base import BaseService, BaseServiceItem
+from services.base import BaseService, BaseServiceItem, USER_AGENT
+from util.favicon import get_favicon
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class CoupangItem(BaseServiceItem):
@@ -15,24 +17,14 @@ class CoupangItem(BaseServiceItem):
         coupang_dict = {
             'name': {'label': '상품명', 'type': str, 'value': ''},
             'option': {'type': dict, 'value': {}},
-            'price': {'label': '가격', 'type': int, 'value': 0, 'unit': '원'},
+            'price': {'label': '가격', 'type': str, 'value': ''},
             'quantity': {'label': '재고', 'type': str, 'value': ''},
-            'card_benefit': {'label': '카드 할인', 'type': list, 'value': []},
-            'card_benefit_rate': {'label': '최대 카드 할인율', 'type': int, 'value': 0, 'unit': '%'},
+            'card_benefits': {'label': '카드 할인', 'type': dict, 'value': {}},
             'preorder': {'label': '사전예약', 'type': str, 'value': '사전예약 중 아님'},
             'thumbnail': {'type': str, 'value': ''}
         }
 
-        super().__init__(coupang_dict)
-
-        for key, value in kwargs.items():
-            self.__setitem__(key, value)
-
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
-
-        if key == 'card_benefit_avail' and value is False:
-            self.dict['card_benefit_rate']['value'] = 0
+        super().__init__(coupang_dict, **kwargs)
 
 
 class CoupangService(BaseService):
@@ -45,11 +37,8 @@ class CoupangService(BaseService):
     SERVICE_NAME = 'coupang'
     SERVICE_LABEL = '쿠팡'
     SERVICE_COLOR = 0xC73D33
-    SERVICE_ICON = 'https://image9.coupangcdn.com/image/coupang/favicon/v2/favicon.ico'
 
-    def __init__(self, cfg, logger: logging.Logger):
-        self.logger = logging.getLogger('coupang')
-
+    def __init__(self, cfg):
         self.USE_WOW_PRICE = cfg['use_wow_price']
         self.LOGIN = cfg['login']
 
@@ -78,7 +67,8 @@ class CoupangService(BaseService):
             'Referer': 'https://login.coupang.com/login/login.pang'
         }
 
-        self.logger.info('Coupang service initialized.')
+        self.SERVICE_ICON = get_favicon('https://www.coupang.com/', headers=self.header)
+        logger.info('Coupang service initialized.')
 
     async def standardize_url(self, input_string: str) -> Union[str, None]:
         """Standardize given Coupang URL to www.coupang.com/vp/products/... format.
@@ -124,7 +114,7 @@ class CoupangService(BaseService):
 
             return url
         except aiohttp.ClientError:
-            self.logger.error(f'Error while standardizing Coupang URL/string: {input_string}')
+            logger.error(f'Error while standardizing Coupang URL/string: {input_string}')
             return None
 
     async def fetch_items(self, url_list: list) -> dict:
@@ -141,6 +131,7 @@ class CoupangService(BaseService):
         return result_dict
 
     async def get_product_info(self, url: str, session: aiohttp.ClientSession = None) -> Tuple[str, CoupangItem]:
+        # TODO: Rewrite this disaster
         if not session:
             async with aiohttp.ClientSession(headers=self.header) as session:
                 return await self.get_product_info(url, session)
@@ -187,39 +178,42 @@ class CoupangService(BaseService):
 
             current_price = int(re.sub('[^0-9]', '', price_output[0]))
 
-        cards = []
-        card_benefit_rate = 0
-
+        card_benefits = {}
         if soup.find('span', class_='benefit-label'):
-            highest = 0
+            rates = []
+
             for element in soup.find_all('span', class_='benefit-label'):
-                perc = int(''.join(filter(str.isdigit, str(element))))
+                rate = ''.join(filter(str.isdigit, str(element)))
 
-                if perc > highest:
-                    highest = perc
+                rates.append(f'{rate}%')
 
-            card_benefit_rate = highest
+            card_sets = []
 
             for benefit_badge in soup.find_all('div', class_='ccid-benefit-badge__inr'):
+                card_set = []
                 for element in benefit_badge.contents:
                     if element.name == 'img':
                         img_src = element['src']
                         if 'hana-sk' in img_src:
-                            cards.append('하나')
+                            card_set.append('하나')
                         elif 'kb' in img_src:
-                            cards.append('국민')
+                            card_set.append('국민')
                         elif 'lotte' in img_src:
-                            cards.append('롯데')
+                            card_set.append('롯데')
                         elif 'shinhan' in img_src:
-                            cards.append('신한')
+                            card_set.append('신한')
                         elif 'hyundai' in img_src:
-                            cards.append('현대')
+                            card_set.append('현대')
                         elif 'woori' in img_src:
-                            cards.append('우리')
+                            card_set.append('우리')
                         elif 'samsung' in img_src:
-                            cards.append('삼성')
+                            card_set.append('삼성')
                         elif 'bc' in img_src:
-                            cards.append('BC')
+                            card_set.append('BC')
+                card_sets.append(card_set)
+
+            for i in range(len(rates)):
+                card_benefits[', '.join(card_sets[i])] = rates[i]
 
         if soup.find('div', class_='aos-label'):
             qty = re.sub(r'<[^<>]*>', '', str(soup.find('div', class_='aos-label')))
@@ -233,18 +227,19 @@ class CoupangService(BaseService):
         else:
             preorder = '사전예약 중 아님'
 
-        self.logger.info(f'Got price of {url}: {item_name}')
+        logger.info(f'Got price of {url}: {item_name}')
 
         thumbnail = soup.find('img', class_='prod-image__detail')
         thumbnail = f"https:{thumbnail['src']}"
+
+        current_price = f'{current_price:,}원'
 
         item = CoupangItem(
             name=item_name,
             price=current_price,
             option=option,
             quantity=qty,
-            card_benefit=cards,
-            card_benefit_rate=card_benefit_rate,
+            card_benefits=card_benefits,
             preorder=preorder,
             thumbnail=thumbnail
         )
@@ -255,26 +250,10 @@ class CoupangService(BaseService):
                      'password': self.PASSWORD,
                      'rememberMe': 'false'}
 
-        print('Sending GET to login page...')
+        logger.info('Sending GET to login page...')
         await session.get('https://login.coupang.com/login/login.pang')
 
-        print('Sending POST to loginProcess...')
+        logger.info('Sending POST to loginProcess...')
         await session.post('https://login.coupang.com/login/loginProcess.pang',
                            headers=self.login_header,
                            data=post_data)
-
-
-if __name__ == '__main__':
-    import asyncio
-
-    test_cfg = {
-        'email': '',
-        'password': '',
-        'login': False,
-        'use_wow_price': True
-    }
-
-    test_logger = logging.getLogger('coupang')
-    coupang = CoupangService(test_cfg, test_logger)
-    print(asyncio.run(coupang.fetch_items(['https://www.coupang.com/vp/products/6386494820?itemId=13593179557&vendorItemId=80846337039',
-                                           'https://www.coupang.com/vp/products/5189912411?itemId=7202872965&vendorItemId=74494442582&q'])))

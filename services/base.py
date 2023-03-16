@@ -1,37 +1,29 @@
 import abc
 from typing import Union
 
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
 
 class BaseService(abc.ABC):
     @abc.abstractmethod
-    def standardize_url(self, url: str) -> Union[str, None]:
+    async def standardize_url(self, url: str) -> Union[str, None]:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def fetch_items(self, url_list: list):
+    async def fetch_items(self, url_list: list):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_product_info(self, url: str):
+    async def get_product_info(self, url: str):
         raise NotImplementedError
 
 
 class BaseServiceItem:
     """Base class for service items."""
-    def __init__(self, override_dict: dict = None):
-        if override_dict is None:
-            self.dict = {
-                'name': {'label': '상품명', 'type': str, 'value': ''},
-                'option': {'type': dict, 'value': {}},
-                'price': {'label': '가격', 'type': int, 'value': 0},
-                'thumbnail': {'type': str, 'value': ''}
-            }
+    def __init__(self, item_dict: dict, **kwargs):
+        self.dict = item_dict
 
-        else:
-            self.dict = override_dict
-            if not set(self.dict).issubset(set(override_dict)):
-                missing_keys = set(self.dict).difference(set(override_dict))
-                raise KeyError(f'{str(missing_keys)} is missing from override_dict')
+        for key, value in kwargs.items():
+            self.__setitem__(key, value)
 
     def label(self, key):
         return self.dict[key]['label']
@@ -62,7 +54,7 @@ class BaseServiceItem:
 
     def __setitem__(self, key, value) -> None:
         if type(value) is not self.dict[key]['type']:
-            raise TypeError(f'{key} value type must be {self.dict[key]["type"]}')
+            raise TypeError(f'{key} value type must be {self.dict[key]["type"]}, not {type(value)}')
         elif key not in self.dict.keys():
             raise KeyError(f'{key} is not a valid key for {self.__class__.__name__}')
         else:
@@ -70,3 +62,6 @@ class BaseServiceItem:
 
     def __repr__(self):
         return str(self.dict)
+
+    def __eq__(self, other):
+        return self.dict == other.dict
