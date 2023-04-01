@@ -524,9 +524,9 @@ class DiscordPriceBot(commands.Bot):
                 await ctx.send(embed=await self.get_embed('상품 목록', '추가된 상품이 없습니다.'))
 
     async def on_ready(self):
-        logger.info(f'Logged in as {self.user.name} | {self.user.id}')
+        print(f'Logged in as {self.user.name} | {self.user.id}')
         await self.wait_until_ready()
-        logger.info('Target user ID is', self.owner_id)
+        print('Target user ID is', self.owner_id)
         self.owner = await self.get_or_fetch_user(self.owner_id)
 
         if self.init:
@@ -548,19 +548,19 @@ class DiscordPriceBot(commands.Bot):
     async def check_price(self):
         await asyncio.sleep(5)
         if cfg['test_mode'] is True:
-            logger.info('Test mode enabled')
+            print('Test mode enabled')
             while True:
                 self.item_dict = {}
                 await self.update_item_dict()
                 for service_name, service_item_dict in self.item_dict.items():
                     for url, item in service_item_dict.items():
-                        logger.info(f'{item["name"]} | {item["price"]} | {url}')
+                        print(f'{item["name"]} | {item["price"]} | {url}')
 
                 await asyncio.sleep(10)
 
         else:
             while True:
-                logger.info('Starting price check cycle...')
+                print('Starting price check cycle...')
                 try:
                     last_dict = self.item_dict
                     await self.update_item_dict()
@@ -640,11 +640,11 @@ class DiscordPriceBot(commands.Bot):
                         except KeyError:  # New items
                             pass
 
-                    logger.info('Price check cycle ended.')
+                    print('Price check cycle ended.')
                     await asyncio.sleep(cfg['interval'])
 
                 except Exception as e:
-                    logger.error(f'Price check failed with exception {e}')
+                    print(f'Price check failed with exception {e}')
                     traceback.print_tb(e.__traceback__)
                     await asyncio.sleep(5)
 
