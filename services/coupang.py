@@ -157,7 +157,7 @@ class CoupangService(BaseService):
         for x in range(len(option_names)):
             option[option_names[x]] = option_values[x]
 
-        if soup.find_all('div', class_='oos-label') or not price_match:
+        if not price_match:
             current_price = 0
 
         else:
@@ -177,6 +177,8 @@ class CoupangService(BaseService):
                                 element.strip()]
 
             current_price = int(re.sub('[^0-9]', '', price_output[0]))
+
+        current_price = f'{current_price:,}원'
 
         card_benefits = {}
         if soup.find('span', class_='benefit-label'):
@@ -217,8 +219,9 @@ class CoupangService(BaseService):
 
         if soup.find('div', class_='aos-label'):
             qty = re.sub(r'<[^<>]*>', '', str(soup.find('div', class_='aos-label')))
-        elif not current_price:
+        elif not soup.find('div', class_='oos-label'):
             qty = '품절'
+            current_price += ' (품절)'
         else:
             qty = '재고 있음'
 
@@ -227,12 +230,10 @@ class CoupangService(BaseService):
         else:
             preorder = '사전예약 중 아님'
 
-        logger.info(f'Got price of {url}: {item_name}')
+        print(f'Got price of {url}: {item_name}')
 
         thumbnail = soup.find('img', class_='prod-image__detail')
         thumbnail = f"https:{thumbnail['src']}"
-
-        current_price = f'{current_price:,}원'
 
         item = CoupangItem(
             name=item_name,
