@@ -8,8 +8,9 @@ from bs4 import BeautifulSoup
 from services.base import BaseService, BaseServiceItem, USER_AGENT
 from util.favicon import get_favicon
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+
+def pprint(*args, **kwargs):
+    print('[coupang]', *args, **kwargs)
 
 
 class CoupangItem(BaseServiceItem):
@@ -68,7 +69,7 @@ class CoupangService(BaseService):
         }
 
         self.SERVICE_ICON = get_favicon('https://www.coupang.com/', headers=self.header)
-        logger.info('Coupang service initialized.')
+        pprint('Coupang service initialized.')
 
     async def standardize_url(self, input_string: str) -> Union[str, None]:
         """Standardize given Coupang URL to www.coupang.com/vp/products/... format.
@@ -114,7 +115,7 @@ class CoupangService(BaseService):
 
             return url
         except aiohttp.ClientError:
-            logger.error(f'Error while standardizing Coupang URL/string: {input_string}')
+            pprint(f'Error while standardizing Coupang URL/string: {input_string}')
             return None
 
     async def fetch_items(self, url_list: list) -> dict:
@@ -230,8 +231,6 @@ class CoupangService(BaseService):
         else:
             preorder = '사전예약 중 아님'
 
-        print(f'Got price of {url}: {item_name}')
-
         thumbnail = soup.find('img', class_='prod-image__detail')
         thumbnail = f"https:{thumbnail['src']}"
 
@@ -251,10 +250,7 @@ class CoupangService(BaseService):
                      'password': self.PASSWORD,
                      'rememberMe': 'false'}
 
-        logger.info('Sending GET to login page...')
         await session.get('https://login.coupang.com/login/login.pang')
-
-        logger.info('Sending POST to loginProcess...')
         await session.post('https://login.coupang.com/login/loginProcess.pang',
                            headers=self.login_header,
                            data=post_data)

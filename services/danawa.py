@@ -8,11 +8,12 @@ from bs4 import BeautifulSoup
 from services.base import BaseService, BaseServiceItem, USER_AGENT
 from util.favicon import get_favicon
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 context.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
+
+
+def pprint(*args, **kwargs):
+    print('[danawa]', *args, **kwargs)
 
 
 class DanawaItem(BaseServiceItem):
@@ -33,8 +34,9 @@ class DanawaService(BaseService):
     SERVICE_LABEL = '다나와'
     SERVICE_COLOR = 0x5EC946
     SERVICE_ICON = 'https://img.danawa.com/new/tour/img/logo/sns_danawa.jpg'
+
     def __init__(self):
-        logger.info('Danawa service initialized.')
+        pprint('Danawa service initialized.')
 
     async def standardize_url(self, url: str) -> Union[str, None]:
         if 'danawa.page.link' in url:  # Mobile App Share URL to Mobile Web URL
