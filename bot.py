@@ -556,7 +556,7 @@ class DiscordPriceBot(commands.Bot):
                     for url, item in service_item_dict.items():
                         print(f'{item["name"]} | {item["price"]} | {url}')
 
-                await asyncio.sleep(10)
+                await asyncio.sleep(cfg['interval'])
 
         else:
             while True:
@@ -610,13 +610,13 @@ class DiscordPriceBot(commands.Bot):
 
                                             if item_value != last_item[key]:
                                                 if not item_value:
-                                                    item_value_string = '없음'
+                                                    item_value_string = '정보 없음'
                                                 if not last_value:
-                                                    last_value_string = '없음'
+                                                    last_value_string = '정보 없음'
 
                                                 embed.add_field(
-                                                    name=label,
-                                                    value=f'{last_value_string} -> {item_value_string}',
+                                                    name=f'*{label}*',
+                                                    value=f'*{last_value_string} -> {item_value_string}*',
                                                     inline=False)
                                             else:
                                                 if item_value:
