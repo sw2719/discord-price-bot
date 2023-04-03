@@ -51,7 +51,7 @@ class DiscordPriceBot(commands.Bot):
                 self.url_dict = json.load(f)
 
         except (FileNotFoundError, json.JSONDecodeError):
-            logger.warning('URL json file not found or invalid. Creating one')
+            print('URL json file not found or invalid. Creating one')
             self.url_dict = {}
 
             with open('url.json', 'w') as f:
@@ -175,12 +175,12 @@ class DiscordPriceBot(commands.Bot):
                 if service.SERVICE_NAME in input_url:
                     break
             else:
-                logger.warning('No substring of supported service name found in input URL: ' + input_url)
+                print('No substring of supported service name found in input URL: ' + input_url)
                 await ctx.send(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
                 return
 
             if len(self.url_dict[service.SERVICE_NAME]) == 25:
-                logger.warning('Maximum number of items reached for service: ' + service.SERVICE_NAME)
+                print('Maximum number of items reached for service: ' + service.SERVICE_NAME)
                 await ctx.send(embed=await self.get_embed('추가 실패', '더 이상 해당 서비스의 상품을 추가할 수 없습니다.\n'
                                                                     '먼저 상품을 제거하세요.',
                                                           color=self.COLOR_ERROR))
@@ -189,7 +189,7 @@ class DiscordPriceBot(commands.Bot):
             standardized_url = await service.standardize_url(input_url)
 
             if standardized_url is None:
-                logger.warning('Failed to standardize URL: ' + input_url)
+                print('Failed to standardize URL: ' + input_url)
                 await ctx.send(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
                 return
             elif standardized_url in self.url_dict[service.SERVICE_NAME]:
@@ -572,6 +572,7 @@ class DiscordPriceBot(commands.Bot):
                                 last_item = last_dict[service_name][url]
 
                                 if item != last_item:
+                                    print('Item status changed:', item['name'], f"({url})")
                                     embed = await self.get_embed(
                                          '상품 정보 변경됨', '다음 상품의 정보가 변경되었습니다.',
                                          author=self.services[service_name].SERVICE_LABEL,
@@ -618,6 +619,7 @@ class DiscordPriceBot(commands.Bot):
                                                     name=f'*{label}*',
                                                     value=f'*{last_value_string} -> {item_value_string}*',
                                                     inline=False)
+                                                print(f'{key}: {last_value_string} -> {item_value_string}')
                                             else:
                                                 if item_value:
                                                     embed.add_field(name=label, value=item_value_string, inline=False)
@@ -650,8 +652,7 @@ class DiscordPriceBot(commands.Bot):
 
 
 if __name__ == '__main__':
-    logger = logging.getLogger('bot')
-    logger.setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     print('Python version:', sys.version)
 
@@ -660,7 +661,7 @@ if __name__ == '__main__':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     if not os.path.isfile('config.json'):
-        logger.warning('config.json not found. Creating new config file. Please fill in the required information.')
+        print('config.json not found. Creating new config file. Please fill in the required information.')
         reset_cfg()
     else:
         try:
