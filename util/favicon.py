@@ -17,9 +17,15 @@ def get_favicon(url, headers=None):
             favicon_url = favicon_link['href']
             if favicon_url.startswith('//'):
                 favicon_url = f'{url.split("//")[0]}{favicon_url}'
+            elif favicon_url.startswith('/'):
+                favicon_url = f'{url}{favicon_url}'
             return favicon_url
 
         return ''
 
     except requests.RequestException:
         return ''
+
+
+if __name__ == '__main__':
+    print(get_favicon(input('Enter URL: ')))
