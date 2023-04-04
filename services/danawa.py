@@ -1,4 +1,3 @@
-import logging
 import asyncio
 import aiohttp
 import ssl
@@ -6,7 +5,6 @@ from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
 from services.base import BaseService, BaseServiceItem, USER_AGENT
-from util.favicon import get_favicon
 
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 context.options |= 0x4  # OP_LEGACY_SERVER_CONNECT

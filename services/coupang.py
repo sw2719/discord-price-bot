@@ -1,5 +1,4 @@
 import re
-import logging
 import asyncio
 import aiohttp
 from typing import Union, Tuple
