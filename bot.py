@@ -219,6 +219,7 @@ class DiscordPriceBot(commands.Bot):
                 return
 
             standardized_url = await service.standardize_url(input_url)
+            print('Standardized URL:', standardized_url)
 
             if standardized_url is None:
                 print('Failed to standardize URL: ' + input_url)
@@ -229,9 +230,9 @@ class DiscordPriceBot(commands.Bot):
                 await ctx.send(embed=await self.get_embed('추가 실패', '이미 추가된 상품입니다.', color=self.COLOR_ERROR))
                 return
 
+            print('Fetching item info...')
             url, item_info = await service.get_product_info(standardized_url)
             self.url_dict[service.SERVICE_NAME].append(standardized_url)
-            print('Adding standardized URL:', url)
 
             embed = await self.get_embed('상품 추가됨', '다음 상품을 추가했습니다.', color=self.COLOR_SUCCESS,
                                          author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
