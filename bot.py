@@ -556,7 +556,6 @@ class DiscordPriceBot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
-        await self.wait_until_ready()
         print('Target user ID is', self.owner_id)
         self.owner = await self.get_or_fetch_user(self.owner_id)
 
