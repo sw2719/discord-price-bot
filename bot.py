@@ -96,19 +96,7 @@ class DiscordPriceBot(commands.Bot):
 
         for service in SERVICES:
             if service.SERVICE_DEFAULT_CONFIG is not None:
-                try:
-                    self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME])
-                except KeyError:
-                    print(f'Config for {service.SERVICE_NAME} not found. Creating one')
-                    cfg[service.SERVICE_NAME] = deepcopy(service.SERVICE_DEFAULT_CONFIG)
-
-                    with open('config.json', 'w') as f:
-                        json.dump(cfg, f, indent=4)
-
-                    config_updated = True
-
-                    print('Updated config file. Please review and edit settings as needed.')
-                    sys.exit(1)
+                self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME])
             else:
                 self.services[service.SERVICE_NAME] = service()
 
