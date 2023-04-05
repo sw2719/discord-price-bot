@@ -53,10 +53,12 @@ class NaverService(BaseService):
                 async with session.get(url) as r:
                     url = str(r.url)
 
+        url = url.replace('m.', '')
+
         if 'brand.naver.com' in url:
-            if 'm.brand.naver.com' in url:
-                url = url.replace('m.', '')
-            url = re.findall('https://brand.naver.com/[a-z]*/products/[0-9]*', url)[0]
+            url = re.findall('https://brand.naver.com/[\S]*/products/[0-9]*', url)[0]
+        elif 'smartstore.naver.com' in url:
+            url = re.findall('https://smartstore.naver.com/[\S]*/products/[0-9]*', url)[0]
         else:
             return None
 
