@@ -397,7 +397,7 @@ class DiscordPriceBot(commands.Bot):
             services_with_urls = []
             i = 1
 
-            for i, (service_name, url_list) in enumerate(self.url_dict.items()):
+            for service_name, url_list in self.url_dict.items():
                 if url_list:
                     services_with_urls.append(service_name)
                     embed.add_field(
