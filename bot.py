@@ -77,6 +77,7 @@ class DiscordPriceBot(commands.Bot):
                 except KeyError:
                     print(f'Config for {service.SERVICE_NAME} not found. Creating one')
                     cfg[service.SERVICE_NAME] = deepcopy(service.SERVICE_DEFAULT_CONFIG)
+                    config_updated = True
                     continue
 
                 for key in service.SERVICE_DEFAULT_CONFIG:
