@@ -77,12 +77,14 @@ class NaverService(BaseService):
         )
 
         await main_page.locator('#log\.login').click()
-        main_page.expect_request_finished()
+        await main_page.wait_for_load_state('networkidle')
 
         try:
-            await main_page.locator('#new\.save').click(timeout=2000)
+            await main_page.locator('#new\.save').click(timeout=1000)
         except PlaywrightTimeoutError:
             pass
+
+        await main_page.wait_for_load_state('networkidle')
 
     async def fetch_items(self, url_list: list) -> dict:
         if url_list:
