@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def get_favicon(url, headers=None):
+def get_favicon(url, headers=None) -> str:
     """Retrieves the favicon URL of a website."""
     if headers is None:
         headers = {}

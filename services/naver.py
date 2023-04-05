@@ -47,7 +47,7 @@ class NaverService(BaseService):
                    "Maximum points will be inaccurate and benefit price won't be available")
         pprint('Naver service initialized.')
 
-    async def standardize_url(self, url):
+    async def standardize_url(self, url) -> Union[str, None]:
         if 'naver.me' in url:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as r:
