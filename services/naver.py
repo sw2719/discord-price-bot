@@ -131,6 +131,7 @@ class NaverService(BaseService):
         product_page = await context.new_page()
         await product_page.goto(url)
         product_page.expect_request_finished()
+        await product_page.wait_for_load_state('networkidle')
 
         item_name = await product_page.locator('#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
                                                'div._3k440DUKzy > div._1eddO7u4UC > h3').text_content()
