@@ -90,6 +90,7 @@ class NaverService(BaseService):
                 browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
+                context.set_default_timeout(10000)
 
                 if self.LOGIN:
                     await self._login(context)
@@ -114,6 +115,7 @@ class NaverService(BaseService):
                 browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
+                context.set_default_timeout(10000)
 
                 if self.LOGIN:
                     await self._login(context)
