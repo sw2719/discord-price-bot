@@ -200,8 +200,11 @@ class DiscordPriceBot(commands.Bot):
                 else:
                     input_url = message.content
 
+            print('Trying to add URL:', input_url)
+
             for service in self.services.values():
                 if service.SERVICE_NAME in input_url:
+                    print('Found matching service:', service.SERVICE_NAME)
                     break
             else:
                 print('No substring of supported service name found in input URL: ' + input_url)
@@ -222,11 +225,13 @@ class DiscordPriceBot(commands.Bot):
                 await ctx.send(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
                 return
             elif standardized_url in self.url_dict[service.SERVICE_NAME]:
+                print('URL already added: ' + standardized_url)
                 await ctx.send(embed=await self.get_embed('추가 실패', '이미 추가된 상품입니다.', color=self.COLOR_ERROR))
                 return
 
             url, item_info = await service.get_product_info(standardized_url)
             self.url_dict[service.SERVICE_NAME].append(standardized_url)
+            print('Adding standardized URL:', url)
 
             embed = await self.get_embed('상품 추가됨', '다음 상품을 추가했습니다.', color=self.COLOR_SUCCESS,
                                          author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
