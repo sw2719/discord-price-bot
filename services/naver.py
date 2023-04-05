@@ -83,23 +83,28 @@ class NaverService(BaseService):
             pass
 
     async def fetch_items(self, url_list: list) -> dict:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
-            context = await browser.new_context(
-                user_agent=USER_AGENT)
-            await self._login(context)
+        if url_list:
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
+                context = await browser.new_context(
+                    user_agent=USER_AGENT)
 
-            results = await asyncio.gather(*[self.get_product_info(url, context) for url in url_list])
+                if self.LOGIN:
+                    await self._login(context)
 
-            await context.close()
-            await browser.close()
+                results = await asyncio.gather(*[self.get_product_info(url, context) for url in url_list])
 
-        result_dict = {}
+                await context.close()
+                await browser.close()
 
-        for result in results:
-            result_dict[result[0]] = result[1]
+            result_dict = {}
 
-        return result_dict
+            for result in results:
+                result_dict[result[0]] = result[1]
+
+            return result_dict
+        else:
+            return {}
 
     async def get_product_info(self, url: str, context: BrowserContext = None) -> Tuple[str, NaverItem]:
         if context is None:
@@ -107,7 +112,10 @@ class NaverService(BaseService):
                 browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
-                await self._login(context)
+
+                if self.LOGIN:
+                    await self._login(context)
+
                 url, item = await self.get_product_info(url, context)
                 await context.close()
                 await browser.close()
