@@ -273,15 +273,16 @@ class DiscordPriceBot(commands.Bot):
             embed = await self.get_embed('상품 제거', '제거할 상품이 해당되는 서비스의 번호를 입력하세요.',
                                          footer="취소하려면 '취소'를 입력하세요.")
             services_with_urls = []
+            i = 1
 
-            for i, (service_name, url_list) in enumerate(self.url_dict.items()):
+            for service_name, url_list in self.url_dict.items():
                 if url_list:
-                    index = i + 1
                     services_with_urls.append(service_name)
                     embed.add_field(
-                        name=f"{str(index)}: {self.services[service_name].SERVICE_LABEL}",
+                        name=f"{str(i)}: {self.services[service_name].SERVICE_LABEL}",
                         value=f"{len(url_list)}개 추가됨"
                     )
+                    i += 1
 
             service_count = len(services_with_urls)
 
@@ -388,15 +389,16 @@ class DiscordPriceBot(commands.Bot):
             embed = await self.get_embed('상품 정보', '정보를 확인할 상품이 해당되는 서비스의 번호를 입력하세요.',
                                          footer="취소하려면 '취소'를 입력하세요.")
             services_with_urls = []
+            i = 1
 
             for i, (service_name, url_list) in enumerate(self.url_dict.items()):
                 if url_list:
-                    index = i + 1
                     services_with_urls.append(service_name)
                     embed.add_field(
-                        name=f"{str(index)}: {self.services[service_name].SERVICE_LABEL}",
+                        name=f"{str(i)}: {self.services[service_name].SERVICE_LABEL}",
                         value=f"{len(url_list)}개 추가됨"
                     )
+                    i += 1
 
             service_count = len(services_with_urls)
 
