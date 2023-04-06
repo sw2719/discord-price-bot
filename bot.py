@@ -285,7 +285,7 @@ class DiscordPriceBot(commands.Bot):
             embed.add_field(name='URL', value=url, inline=False)
 
             await context_message.edit(embed=embed)
-            await self.update_item_dict()
+            self.item_dict[service.SERVICE_NAME][url] = item_info
             self.save_url_dict()
 
         @self.command()
