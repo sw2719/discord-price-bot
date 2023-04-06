@@ -83,7 +83,11 @@ class NaverService(BaseService):
         try:
             await main_page.locator('#new\.save').click(timeout=1000)
         except PlaywrightTimeoutError:
-            pass
+            try:
+                await main_page.locator('#err_common > div').is_visible(timeout=100)
+                raise ValueError('Login failed due to incorrect ID or password.')
+            except PlaywrightTimeoutError:
+                pass
 
         await main_page.wait_for_load_state('networkidle')
 
@@ -131,39 +135,40 @@ class NaverService(BaseService):
 
         product_page = await context.new_page()
         await product_page.goto(url)
-        product_page.expect_request_finished()
-        await product_page.wait_for_load_state('networkidle')
 
-        item_name = await product_page.locator('#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
-                                               'div._3k440DUKzy > div._1eddO7u4UC > h3').text_content()
+        item_name = await product_page.wait_for_selector(
+            '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
+            'div._3k440DUKzy > div._1eddO7u4UC > h3')
+        item_name = await item_name.text_content()
 
-        current_price = await product_page.locator(
+        current_price = await product_page.wait_for_selector(
             '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
             'div._3k440DUKzy > div.WrkQhIlUY0 > div > strong > span._1LY7DqCnwR'
-        ).text_content()
-        current_price += '원'
+        )
+        current_price = await current_price.text_content() + '원'
+
+        max_point = await product_page.wait_for_selector(
+            '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
+            'div._2a18RJADk5 > div._3gd5biYh9U > div > div > span',
+        )
+        max_point = await max_point.text_content() + '원'
+
+        thumbnail = await product_page.wait_for_selector(
+            '#content > div > div._2-I30XS1lA > div.-g-2PI3RtF > div._367LI5Az0t > div._2tT_gkmAOr._3CdGr9Fejo > img'
+        )
+        thumbnail = await thumbnail.get_attribute('src')
 
         if self.LOGIN:
             try:
-                benefit_price = await product_page.locator(
+                benefit_price = await product_page.wait_for_selector(
                     '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
-                    'div._2a18RJADk5 > div._1UNQIwX1sN > div > strong._-2CCeRkfCX > span'
-                ).text_content(timeout=1000)
-                benefit_price += '원'
+                    'div._2a18RJADk5 > div._1UNQIwX1sN > div > strong._-2CCeRkfCX > span',
+                    timeout=1000)
+                benefit_price = await benefit_price.text_content() + '원'
             except PlaywrightTimeoutError:
                 benefit_price = ''
         else:
             benefit_price = ''
-
-        max_point = await product_page.locator(
-            '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
-            'div._2a18RJADk5 > div._3gd5biYh9U > div > div > span',
-        ).text_content()
-        max_point += '원'
-
-        thumbnail = await product_page.locator(
-            '#content > div > div._2-I30XS1lA > div.-g-2PI3RtF > div._367LI5Az0t > div._2tT_gkmAOr._3CdGr9Fejo > img'
-        ).get_attribute('src')
 
         item = NaverItem(
             name=item_name,
