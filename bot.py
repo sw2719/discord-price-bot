@@ -202,20 +202,34 @@ class DiscordPriceBot(commands.Bot):
 
             print('Trying to add URL:', input_url)
 
+            context_text = '상품을 추가하는 중입니다...'
+            context_message = await ctx.send(embed=await self.get_embed('상품 추가', context_text))
+
+            async def update_context_message(text):
+                nonlocal context_text
+                nonlocal context_message
+                context_text += '\n' + text
+                await context_message.edit(embed=await self.get_embed('상품 추가', context_text))
+
             for service in self.services.values():
                 if service.SERVICE_NAME in input_url:
                     print('Found matching service:', service.SERVICE_NAME)
+                    await update_context_message('URL에 해당하는 서비스를 찾았습니다: ' + service.SERVICE_LABEL)
                     break
             else:
                 print('No substring of supported service name found in input URL: ' + input_url)
-                await ctx.send(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
+                await context_message.edit(embed=await self.get_embed(
+                    '추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR
+                ))
                 return
 
             if len(self.url_dict[service.SERVICE_NAME]) == 25:
                 print('Maximum number of items reached for service: ' + service.SERVICE_NAME)
-                await ctx.send(embed=await self.get_embed('추가 실패', '더 이상 해당 서비스의 상품을 추가할 수 없습니다.\n'
-                                                                    '먼저 상품을 제거하세요.',
-                                                          color=self.COLOR_ERROR))
+                await context_message.edit(embed=await self.get_embed(
+                    '추가 실패', '더 이상 해당 서비스의 상품을 추가할 수 없습니다.\n'
+                    '먼저 상품을 제거하세요.',
+                    color=self.COLOR_ERROR
+                ))
                 return
 
             standardized_url = await service.standardize_url(input_url)
@@ -223,19 +237,22 @@ class DiscordPriceBot(commands.Bot):
 
             if standardized_url is None:
                 print('Failed to standardize URL: ' + input_url)
-                await ctx.send(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
+                await context_message.edit(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
                 return
             elif standardized_url in self.url_dict[service.SERVICE_NAME]:
                 print('URL already added: ' + standardized_url)
-                await ctx.send(embed=await self.get_embed('추가 실패', '이미 추가된 상품입니다.', color=self.COLOR_ERROR))
+                await context_message.edit(embed=await self.get_embed('추가 실패', '이미 추가된 상품입니다.', color=self.COLOR_ERROR))
                 return
+            else:
+                await update_context_message('일반화된 URL: ' + standardized_url)
 
             print('Fetching item info...')
+            await update_context_message('상품 정보를 가져오는 중...')
             url, item_info = await service.get_product_info(standardized_url)
             self.url_dict[service.SERVICE_NAME].append(standardized_url)
 
             embed = await self.get_embed('상품 추가됨', '다음 상품을 추가했습니다.', color=self.COLOR_SUCCESS,
-                                         author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
+                                               author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
 
             for key, entry in item_info.items():
                 value = entry['value']
@@ -267,7 +284,7 @@ class DiscordPriceBot(commands.Bot):
 
             embed.add_field(name='URL', value=url, inline=False)
 
-            await ctx.send(embed=embed)
+            await context_message.edit(embed=embed)
             await self.update_item_dict()
             self.save_url_dict()
 
