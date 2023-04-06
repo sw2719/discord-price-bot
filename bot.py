@@ -331,10 +331,17 @@ class DiscordPriceBot(commands.Bot):
             for i, url in enumerate(self.url_dict[selected_service]):
                 item = self.item_dict[selected_service][url]
 
+                options = []
                 try:
-                    options = ', '.join(item['option'])
+                    item_options = item['option']
+
+                    for key, value in item_options.items():
+                        options.append(f"{key}: {value}")
+
                 except KeyError:
-                    options = ''
+                    pass
+
+                options = '\n'.join(options)
 
                 embed.add_field(name=f"{i + 1}: {item['name']}",
                                 value=options, inline=False)
@@ -447,10 +454,17 @@ class DiscordPriceBot(commands.Bot):
             for i, url in enumerate(self.url_dict[selected_service]):
                 item = self.item_dict[selected_service][url]
 
+                options = []
                 try:
-                    options = ', '.join(item['option'])
+                    item_options = item['option']
+
+                    for key, value in item_options.items():
+                        options.append(f"{key}: {value}")
+
                 except KeyError:
-                    options = ''
+                    pass
+
+                options = '\n'.join(options)
 
                 embed.add_field(name=f"{i + 1}: {item['name']}",
                                 value=options, inline=False)
