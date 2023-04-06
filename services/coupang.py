@@ -219,7 +219,7 @@ class CoupangService(BaseService):
 
         if soup.find('div', class_='aos-label'):
             qty = re.sub(r'<[^<>]*>', '', str(soup.find('div', class_='aos-label')))
-        elif not soup.find('div', class_='oos-label'):
+        elif soup.find('div', class_='oos-label'):
             qty = '품절'
             current_price += ' (품절)'
         else:
@@ -253,3 +253,21 @@ class CoupangService(BaseService):
         await session.post('https://login.coupang.com/login/loginProcess.pang',
                            headers=self.login_header,
                            data=post_data)
+
+
+if __name__ == '__main__':
+    coupang = CoupangService({
+        'use_wow_price': True,
+        'login': False,
+        'email': '',
+        'password': '',
+    })
+
+    print('Coupang module test')
+    test_url = input('Enter coupang URL: ')
+    standardized_test_url = asyncio.run(coupang.standardize_url(test_url))
+    print('Standardized URL:', standardized_test_url)
+    _, test_item = asyncio.run(coupang.get_product_info(standardized_test_url))
+
+    for key, value in test_item.items():
+        print(key, '-', value)
