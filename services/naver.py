@@ -21,7 +21,8 @@ class NaverItem(BaseServiceItem):
             'name': {'label': '상품명', 'type': str, 'value': ''},
             'price': {'label': '가격', 'type': str, 'value': ''},
             'benefit_price': {'label': '혜택가', 'type': str, 'value': ''},
-            'max_point': {'label': '최대 적립 포인트', 'type': str, 'value': ''}
+            'max_point': {'label': '최대 적립 포인트', 'type': str, 'value': ''},
+            'thumbnail': {'type': str, 'value': ''}
         }
 
         super().__init__(naver_dict, **kwargs)
@@ -160,11 +161,16 @@ class NaverService(BaseService):
         ).text_content()
         max_point += '원'
 
+        thumbnail = await product_page.locator(
+            '#content > div > div._2-I30XS1lA > div.-g-2PI3RtF > div._367LI5Az0t > div._2tT_gkmAOr._3CdGr9Fejo > img'
+        ).get_attribute('src')
+
         item = NaverItem(
             name=item_name,
             price=current_price,
             benefit_price=benefit_price,
-            max_point=max_point
+            max_point=max_point,
+            thumbnail=thumbnail
         )
 
         return url, item
