@@ -613,7 +613,10 @@ class DiscordPriceBot(commands.Bot):
             self.init = False
 
     async def check_price(self):
-        await asyncio.sleep(5)
+        print('Starting price check loop...')
+        while not self.is_ready():
+            print('Waiting for bot to be ready...')
+            await asyncio.sleep(1)
         if cfg['test_mode'] is True:
             print('Test mode enabled')
             while True:
@@ -626,10 +629,10 @@ class DiscordPriceBot(commands.Bot):
                 await asyncio.sleep(cfg['interval'])
 
         else:
+            print('Loop is now starting...')
             while True:
-                print('Starting price check cycle...')
                 try:
-                    last_dict = self.item_dict
+                    last_dict = deepcopy(self.item_dict)
                     await self.update_item_dict()
                     current_dict = deepcopy(self.item_dict)
 
@@ -709,7 +712,6 @@ class DiscordPriceBot(commands.Bot):
                         except KeyError:  # New items
                             pass
 
-                    print('Price check cycle ended.')
                     await asyncio.sleep(cfg['interval'])
 
                 except Exception as e:
