@@ -3,7 +3,7 @@ import asyncio
 import aiohttp
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError, BrowserContext
 from typing import Union, Tuple
-from services.base import BaseService, BaseServiceItem, USER_AGENT
+from services.base import AbstractService, BaseServiceItem, USER_AGENT
 from util.favicon import get_favicon
 
 # Debug settings
@@ -27,7 +27,7 @@ class NaverItem(BaseServiceItem):
 
         super().__init__(naver_dict, **kwargs)
 
-class NaverService(BaseService):
+class NaverService(AbstractService):
     SERVICE_DEFAULT_CONFIG = {
         'login': False,
         'id': '',

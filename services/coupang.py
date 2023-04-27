@@ -4,7 +4,7 @@ import aiohttp
 from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
-from services.base import BaseService, BaseServiceItem, USER_AGENT
+from services.base import AbstractService, BaseServiceItem, USER_AGENT
 from util.favicon import get_favicon
 
 
@@ -27,7 +27,7 @@ class CoupangItem(BaseServiceItem):
         super().__init__(coupang_dict, **kwargs)
 
 
-class CoupangService(BaseService):
+class CoupangService(AbstractService):
     SERVICE_DEFAULT_CONFIG = {
         'use_wow_price': False,
         'login': False,

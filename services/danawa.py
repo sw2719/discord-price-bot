@@ -4,7 +4,7 @@ import ssl
 from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
-from services.base import BaseService, BaseServiceItem, USER_AGENT
+from services.base import AbstractService, BaseServiceItem, USER_AGENT
 
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 context.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
@@ -26,7 +26,7 @@ class DanawaItem(BaseServiceItem):
         super().__init__(danawa_dict, **kwargs)
 
 
-class DanawaService(BaseService):
+class DanawaService(AbstractService):
     SERVICE_DEFAULT_CONFIG = None
     SERVICE_NAME = 'danawa'
     SERVICE_LABEL = '다나와'
