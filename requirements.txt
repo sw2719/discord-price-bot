@@ -1,6 +1,6 @@
 aiohttp
 requests
-disnake
+py-cord
 bs4
 furl
 playwright

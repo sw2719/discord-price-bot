@@ -4,11 +4,13 @@ import json
 import os
 import logging
 import traceback
-import disnake as ds
-from disnake.ext import commands
-from typing import Union
 from copy import deepcopy
 
+import discord as ds  # noqa
+from discord.ext.commands import NotOwner  # noqa
+
+from util.embed_factory import get_embed
+from views.menu import MenuView
 from services.coupang import CoupangService
 from services.danawa import DanawaService
 from services.naver import NaverService
@@ -34,17 +36,19 @@ def reset_cfg():
     sys.exit(1)
 
 
-class DiscordPriceBot(commands.Bot):
+class DiscordPriceBot(ds.Bot):
     COLOR_ERROR = 0xd1352a
     COLOR_SUCCESS = 0x39e360
 
     def __init__(self):
-        intents = ds.Intents.default()
-        intents.members = True
-        super().__init__('.', intents=intents)
         self.init = True
         self.owner_id = int(cfg['user_id'])
-        self.owner = None
+        self.target = None
+
+        intents = ds.Intents.default()
+        intents.members = True  # noqa
+        super().__init__(intents=intents, owner_id=self.owner_id)
+
         self.item_dict = {}
 
         try:
@@ -101,29 +105,14 @@ class DiscordPriceBot(commands.Bot):
                 self.services[service.SERVICE_NAME] = service()
 
         self.command_busy = False
+        self.message_with_view = None
 
         asyncio.run(self.update_item_dict())
-        self.add_bot_commands()
         self.bg_task = self.loop.create_task(self.check_price())
 
     def save_url_dict(self) -> None:
         with open('url.json', 'w') as f:
             json.dump(self.url_dict, f, indent=4)
-
-    async def get_embed(self, title: Union[str, None], description: Union[str, None], color: int = 0x7289da,
-                        author: str = '', icon: str = '', footer: str = '', url=None) -> ds.Embed:
-        embed = ds.Embed(title=title, description=description, color=color, url=url)
-
-        if footer:
-            embed.set_footer(text=footer)
-
-        if author:
-            if icon:
-                embed.set_author(name=author, icon_url=icon)
-            else:
-                embed.set_author(name=author)
-
-        return embed
 
     async def update_item_dict(self) -> None:
         async def get(service):
@@ -131,470 +120,229 @@ class DiscordPriceBot(commands.Bot):
 
         await asyncio.gather(*[get(service) for service in self.services.values()])
 
-    async def on_command(self, ctx: commands.Context) -> None:
-        self.command_busy = True
+    def get_menu_view(self):
+        return MenuView(self.services, self.item_dict, self.add, self.list_, self.info, self.delete, self.select_cancel)
 
-    async def on_command_completion(self, ctx: commands.Context) -> None:
-        self.command_busy = False
+    async def select_cancel(self, interaction: ds.Interaction):
+        await interaction.edit_original_response(content=None, embed=None, view=self.get_menu_view())
 
-    async def on_command_error(self, ctx: commands.Context, exception: commands.CommandError) -> None:
-        self.command_busy = False
-        title = '명령어 실패'
+    async def add(self, interaction: ds.Interaction, input_url: str):
+        print('Trying to add URL:', input_url)
 
-        tb = str(traceback.format_exception(type(exception), exception, exception.__traceback__))
+        context_text = '상품을 추가하는 중입니다...'
+        await interaction.response.edit_message(embed=get_embed('상품 추가', context_text), view=None)
 
-        await ctx.send(embed=await self.get_embed(title, f'```{tb}```', color=self.COLOR_ERROR))
+        async def update_context_message(text):
+            nonlocal context_text
+            nonlocal interaction
+            context_text += '\n' + text
+            await interaction.edit_original_response(embed=get_embed('상품 추가', context_text))
 
-    async def check_command_eligibility(self, ctx: commands.Context) -> bool:
-        title = '명령어 사용 불가'
-
-        if ctx.author.id != self.owner_id:
-            await ctx.send(embed=await self.get_embed(title, '권한이 없습니다.'))
-            return False
-        elif not isinstance(ctx.channel, ds.channel.DMChannel):
-            await ctx.send(embed=await self.get_embed(title, 'DM에서만 명령어를 사용할 수 있습니다.'))
-            return False
-        elif self.command_busy:
-            await ctx.send(embed=await self.get_embed(title, '이미 다른 명령어가 실행 중입니다.'))
-            return False
+        for service in self.services.values():
+            if service.SERVICE_NAME in input_url:
+                print('Found matching service:', service.SERVICE_NAME)
+                await update_context_message('URL에 해당하는 서비스를 찾았습니다: ' + service.SERVICE_LABEL)
+                break
         else:
-            return True
+            print('No substring of supported service name found in input URL: ' + input_url)
+            self.message_with_view = await interaction.edit_original_response(
+                embed=get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR),
+                view=self.get_menu_view()
+            )
+            await interaction.edit_original_response(view=self.get_menu_view())
+            return
 
-    def add_bot_commands(self):
-        self.remove_command('help')
-
-        @self.command(name='help')
-        async def help_(ctx):
-            if not await self.check_command_eligibility(ctx):
-                return
-
-            embed = await self.get_embed('명령어 도움말', None)
-            embed.add_field(name='```.add [상품 URL]```', value='봇에 해당 상품 URL을 추가합니다.', inline=False)
-            embed.add_field(name='```.remove```', value='봇에서 상품을 제거합니다.', inline=False)
-            embed.add_field(name='```.list```', value='추가된 상품 목록을 확인합니다.', inline=False)
-            embed.add_field(name='```.info```', value='추가된 상품의 정보를 확인합니다.', inline=False)
-            embed.add_field(name='```.help```', value='명령어 도움말을 확인합니다.', inline=False)
-
-            await ctx.send(embed=embed)
-
-        @self.command()
-        async def add(ctx, input_url=None):
-            if not await self.check_command_eligibility(ctx):
-                return
-
-            if input_url is None:
-                def check(message):
-                    return message.author.id == self.owner_id
-
-                try:
-                    await ctx.send(embed=await self.get_embed('상품 추가', '추가할 상품의 URL을 입력하세요.',
-                                   footer="취소하려면 '취소'를 입력하세요."))
-                    message = await self.wait_for('message', timeout=30.0, check=check)
-                except asyncio.TimeoutError:
-                    await ctx.send(embed=await self.get_embed('추가 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
-                    return
-
-                if message.content == '취소':
-                    await ctx.send(embed=await self.get_embed('추가 취소됨', '추가를 취소했습니다.'))
-                    return
-                else:
-                    input_url = message.content
-
-            print('Trying to add URL:', input_url)
-
-            context_text = '상품을 추가하는 중입니다...'
-            context_message = await ctx.send(embed=await self.get_embed('상품 추가', context_text))
-
-            async def update_context_message(text):
-                nonlocal context_text
-                nonlocal context_message
-                context_text += '\n' + text
-                await context_message.edit(embed=await self.get_embed('상품 추가', context_text))
-
-            for service in self.services.values():
-                if service.SERVICE_NAME in input_url:
-                    print('Found matching service:', service.SERVICE_NAME)
-                    await update_context_message('URL에 해당하는 서비스를 찾았습니다: ' + service.SERVICE_LABEL)
-                    break
-            else:
-                print('No substring of supported service name found in input URL: ' + input_url)
-                await context_message.edit(embed=await self.get_embed(
-                    '추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR
-                ))
-                return
-
-            if len(self.url_dict[service.SERVICE_NAME]) == 25:
-                print('Maximum number of items reached for service: ' + service.SERVICE_NAME)
-                await context_message.edit(embed=await self.get_embed(
+        if len(self.url_dict[service.SERVICE_NAME]) == 25:
+            print('Maximum number of items reached for service: ' + service.SERVICE_NAME)
+            self.message_with_view = await interaction.edit_original_response(
+                embed=get_embed(
                     '추가 실패', '더 이상 해당 서비스의 상품을 추가할 수 없습니다.\n'
                     '먼저 상품을 제거하세요.',
                     color=self.COLOR_ERROR
-                ))
-                return
+                ),
+                view=self.get_menu_view()
+            )
+            return
 
-            standardized_url = await service.standardize_url(input_url)
-            print('Standardized URL:', standardized_url)
+        standardized_url = await service.standardize_url(input_url)
+        print('Standardized URL:', standardized_url)
 
-            if standardized_url is None:
-                print('Failed to standardize URL: ' + input_url)
-                await context_message.edit(embed=await self.get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR))
-                return
-            elif standardized_url in self.url_dict[service.SERVICE_NAME]:
-                print('URL already added: ' + standardized_url)
-                await context_message.edit(embed=await self.get_embed('추가 실패', '이미 추가된 상품입니다.', color=self.COLOR_ERROR))
-                return
-            else:
-                await update_context_message('일반화된 URL: ' + standardized_url)
+        if standardized_url is None:
+            print('Failed to standardize URL: ' + input_url)
+            self.message_with_view = await interaction.edit_original_response(
+                embed=get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR),
+                view=self.get_menu_view()
+            )
+            return
+        elif standardized_url in self.url_dict[service.SERVICE_NAME]:
+            print('URL already added: ' + standardized_url)
+            self.message_with_view = await interaction.edit_original_response(
+                embed=get_embed('추가 실패', '이미 추가된 URL입니다.', color=self.COLOR_ERROR),
+                view=self.get_menu_view()
+            )
+            return
+        else:
+            await update_context_message('일반화된 URL: ' + standardized_url)
 
-            print('Fetching item info...')
-            await update_context_message('상품 정보를 가져오는 중...')
-            url, item_info = await service.get_product_info(standardized_url)
-            self.url_dict[service.SERVICE_NAME].append(standardized_url)
+        print('Fetching item info...')
+        await update_context_message('상품 정보를 가져오는 중...')
+        url, item_info = await service.get_product_info(standardized_url)
+        self.url_dict[service.SERVICE_NAME].append(standardized_url)
 
-            embed = await self.get_embed('상품 추가됨', '다음 상품을 추가했습니다.', color=self.COLOR_SUCCESS,
-                                               author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
+        embed = get_embed('상품 추가됨', '다음 상품을 추가했습니다.',
+                                color=service.SERVICE_COLOR,
+                                author=service.SERVICE_LABEL,
+                                icon=service.SERVICE_ICON)
 
-            for key, entry in item_info.items():
-                value = entry['value']
+        for key, entry in item_info.items():
+            value = entry['value']
 
-                if key == 'thumbnail':
-                    embed.set_thumbnail(url=value)
-                    continue
+            if key == 'thumbnail':
+                embed.set_thumbnail(url=value)
+                continue
 
-                if not value:
-                    continue
-
-                try:
-                    label = entry['label']
-
-                    if entry['type'] is list:
-                        value = ', '.join(value)
-                    elif entry['type'] is dict:
-                        string_list = []
-                        for value_key, value_value in value.items():
-                            string_list.append(f'{value_key}: {value_value}')
-
-                        value = '\n'.join(string_list)
-
-                    embed.add_field(name=label, value=value, inline=False)
-                except KeyError:
-                    if entry['type'] is dict:
-                        for option_label, option in value.items():
-                            embed.add_field(name=option_label, value=option, inline=False)
-
-            embed.add_field(name='URL', value=url, inline=False)
-
-            await context_message.edit(embed=embed)
-            self.item_dict[service.SERVICE_NAME][url] = item_info
-            self.save_url_dict()
-
-        @self.command()
-        async def remove(ctx):
-            if not await self.check_command_eligibility(ctx):
-                return
-
-            embed = await self.get_embed('상품 제거', '제거할 상품이 해당되는 서비스의 번호를 입력하세요.',
-                                         footer="취소하려면 '취소'를 입력하세요.")
-            services_with_urls = []
-            i = 1
-
-            for service_name, url_list in self.url_dict.items():
-                if url_list:
-                    services_with_urls.append(service_name)
-                    embed.add_field(
-                        name=f"{str(i)}: {self.services[service_name].SERVICE_LABEL}",
-                        value=f"{len(url_list)}개 추가됨"
-                    )
-                    i += 1
-
-            service_count = len(services_with_urls)
-
-            if service_count > 1:
-                await ctx.send(embed=embed)
-
-                def check_service(message):
-                    try:
-                        if message.content == '취소':
-                            return True
-                        else:
-                            return message.author.id == self.owner_id and 1 <= int(message.content) <= service_count
-                    except ValueError:
-                        pass
-
-                try:
-                    message = await self.wait_for('message', timeout=30.0, check=check_service)
-                except asyncio.TimeoutError:
-                    await ctx.send(embed=await self.get_embed('제거 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
-                    return
-
-                if message.content == '취소':
-                    await ctx.send(embed=await self.get_embed('제거 취소됨', '제거를 취소했습니다.'))
-                    return
-                else:
-                    selected_service = services_with_urls[int(message.content) - 1]
-
-            elif service_count == 1:
-                selected_service = services_with_urls[0]
-
-            else:
-                await ctx.send(embed=await self.get_embed('제거 취소됨', '추가된 상품이 없습니다.'))
-                return
-
-            embed = await self.get_embed('상품 제거', "제거할 상품의 번호를 입력하세요.",
-                                         footer="취소하려면 '취소'를 입력하세요.",
-                                         author=self.services[selected_service].SERVICE_LABEL,
-                                         icon=self.services[selected_service].SERVICE_ICON)
-
-            for i, url in enumerate(self.url_dict[selected_service]):
-                item = self.item_dict[selected_service][url]
-
-                options = []
-                try:
-                    item_options = item['option']
-
-                    for key, value in item_options.items():
-                        options.append(f"{key}: {value}")
-
-                except KeyError:
-                    pass
-
-                options = '\n'.join(options)
-
-                embed.add_field(name=f"{i + 1}: {item['name']}",
-                                value=options, inline=False)
-
-            def check_item(message):
-                nonlocal ctx
-
-                try:
-                    if message.content == '취소':
-                        return True
-                    else:
-                        return message.author.id == self.owner_id and \
-                            1 <= int(message.content) <= len(self.url_dict[selected_service])
-                except ValueError:
-                    pass
-
-            await ctx.send(embed=embed)
+            if not value:
+                continue
 
             try:
-                message = await self.wait_for('message', timeout=30.0, check=check_item)
-            except asyncio.TimeoutError:
-                await ctx.send(embed=await self.get_embed('제거 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
-                return
+                label = entry['label']
 
-            if message.content == '취소':
-                await ctx.send(embed=await self.get_embed('제거 취소됨', '제거를 취소했습니다.'))
-                return
-            else:
-                remove_index = int(message.content) - 1
-                remove_url = self.url_dict[selected_service][remove_index]
-                removed_item = self.item_dict[selected_service][remove_url]
+                if entry['type'] is list:
+                    value = ', '.join(value)
+                elif entry['type'] is dict:
+                    string_list = []
+                    for value_key, value_value in value.items():
+                        string_list.append(f'{value_key}: {value_value}')
 
-                del self.item_dict[selected_service][remove_url]
-                del self.url_dict[selected_service][remove_index]
-                self.save_url_dict()
+                    value = '\n'.join(string_list)
 
-                embed = await self.get_embed('상품 제거됨', '다음 상품을 제거했습니다.', color=self.COLOR_SUCCESS,
-                                             author=self.services[selected_service].SERVICE_LABEL,
-                                             icon=self.services[selected_service].SERVICE_ICON)
-
-                embed.add_field(name='상품명', value=removed_item['name'], inline=False)
-
-                if 'option' in removed_item.keys():
-                    for option_label, option in removed_item['option'].items():
+                embed.add_field(name=label, value=value, inline=False)
+            except KeyError:
+                if entry['type'] is dict:
+                    for option_label, option in value.items():
                         embed.add_field(name=option_label, value=option, inline=False)
 
-                embed.add_field(name='URL', value=remove_url, inline=False)
+        embed.add_field(name='URL', value=url, inline=False)
 
-                await ctx.send(embed=embed)
-                await self.update_item_dict()
-                return
+        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        self.item_dict[service.SERVICE_NAME][url] = item_info
+        self.save_url_dict()
 
-        @self.command()
-        async def info(ctx):
-            if not await self.check_command_eligibility(ctx):
-                return
+    async def delete(self, interaction: ds.Interaction, service_name: str, delete_url_list: list):
+        embed = get_embed('상품 제거됨', '다음 상품을 제거했습니다.',
+                          color=self.services[service_name].SERVICE_COLOR,
+                          author=self.services[service_name].SERVICE_LABEL,
+                          icon=self.services[service_name].SERVICE_ICON)
 
-            embed = await self.get_embed('상품 정보', '정보를 확인할 상품이 해당되는 서비스의 번호를 입력하세요.',
-                                         footer="취소하려면 '취소'를 입력하세요.")
-            services_with_urls = []
-            i = 1
+        for url in delete_url_list:
+            deleted_item = self.item_dict[service_name][url]
+            del self.item_dict[service_name][url]
 
-            for service_name, url_list in self.url_dict.items():
-                if url_list:
-                    services_with_urls.append(service_name)
-                    embed.add_field(
-                        name=f"{str(i)}: {self.services[service_name].SERVICE_LABEL}",
-                        value=f"{len(url_list)}개 추가됨"
-                    )
-                    i += 1
+            self.url_dict[service_name].remove(url)
 
-            service_count = len(services_with_urls)
+            options = []
+            try:
+                if deleted_item['option']:
+                    for option_name, option in deleted_item['option'].items():
+                        options.append(f"{option_name}: {option}")
 
-            if service_count > 1:
-                await ctx.send(embed=embed)
-
-                def check_service(message):
-                    try:
-                        if message.content == '취소':
-                            return True
-                        else:
-                            return message.author.id == self.owner_id and 1 <= int(message.content) <= service_count
-                    except ValueError:
-                        pass
-
-                try:
-                    message = await self.wait_for('message', timeout=30.0, check=check_service)
-                except asyncio.TimeoutError:
-                    await ctx.send(embed=await self.get_embed('정보 확인 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
-                    return
-
-                if message.content == '취소':
-                    await ctx.send(embed=await self.get_embed('정보 확인 취소됨', '정보 확인을 취소했습니다.'))
-                    return
+                    options_string = '\n'.join(options)
                 else:
-                    selected_service = services_with_urls[int(message.content) - 1]
+                    options_string = ''
+            except KeyError:
+                options_string = ''
 
-            elif service_count == 1:
-                selected_service = services_with_urls[0]
+            embed.add_field(name=deleted_item['name'], value=options_string, inline=False)
 
-            else:
-                await ctx.send(embed=await self.get_embed('정보 확인 취소됨', '추가된 상품이 없습니다.'))
-                return
+        self.save_url_dict()
+        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        return
 
-            embed = await self.get_embed('상품 정보', "정보를 확인할 상품의 번호를 입력하세요.",
-                                         footer="취소하려면 '취소'를 입력하세요.",
-                                         author=self.services[selected_service].SERVICE_LABEL,
-                                         icon=self.services[selected_service].SERVICE_ICON)
+    async def info(self, interaction: ds.Interaction, service_name: str, url: str):
+        service = self.services[service_name]
+        selected_item = self.item_dict[service_name][url]
 
-            for i, url in enumerate(self.url_dict[selected_service]):
-                item = self.item_dict[selected_service][url]
+        embed = get_embed('상품 정보', None, color=service.SERVICE_COLOR,
+                          author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
 
-                options = []
-                try:
-                    item_options = item['option']
+        for key, entry in selected_item.items():
+            value = entry['value']
 
-                    for key, value in item_options.items():
-                        options.append(f"{key}: {value}")
+            if key == 'thumbnail':
+                embed.set_thumbnail(url=value)
+                continue
 
-                except KeyError:
-                    pass
-
-                options = '\n'.join(options)
-
-                embed.add_field(name=f"{i + 1}: {item['name']}",
-                                value=options, inline=False)
-
-            def check_item(message):
-                nonlocal ctx
-
-                try:
-                    if message.content == '취소':
-                        return True
-                    else:
-                        return message.author.id == self.owner_id and \
-                            1 <= int(message.content) <= len(self.url_dict[selected_service])
-                except ValueError:
-                    pass
-
-            await ctx.send(embed=embed)
+            if not value:
+                continue
 
             try:
-                message = await self.wait_for('message', timeout=30.0, check=check_item)
-            except asyncio.TimeoutError:
-                await ctx.send(embed=await self.get_embed('정보 확인 취소됨', '입력 시간이 초과되었습니다. 다시 시도하세요.'))
-                return
+                label = entry['label']
 
-            if message.content == '취소':
-                await ctx.send(embed=await self.get_embed('정보 확인 취소됨', '정보 확인을 취소했습니다.'))
-                return
-            else:
-                service = self.services[selected_service]
-                selected_index = int(message.content) - 1
-                selected_url = self.url_dict[selected_service][selected_index]
-                selected_item = self.item_dict[selected_service][selected_url]
+                if entry['type'] is list:
+                    value = ', '.join(value)
+                elif entry['type'] is dict:
+                    string_list = []
+                    for value_key, value_value in value.items():
+                        string_list.append(f'{value_key}: {value_value}')
 
-                embed = await self.get_embed('상품 정보', None, color=service.SERVICE_COLOR,
-                                             author=service.SERVICE_LABEL, icon=service.SERVICE_ICON)
+                    value = '\n'.join(string_list)
 
-                for key, entry in selected_item.items():
-                    value = entry['value']
+                embed.add_field(name=label, value=value, inline=False)
+            except KeyError:
+                if entry['type'] is dict:
+                    for option_label, option in value.items():
+                        embed.add_field(name=option_label, value=option, inline=False)
 
-                    if key == 'thumbnail':
-                        embed.set_thumbnail(url=value)
-                        continue
+        embed.add_field(name='URL', value=url, inline=False)
 
-                    if not value:
-                        continue
+        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        return
 
+    async def list_(self, interaction: ds.Interaction):
+        embeds = []
+
+        for service_name, url_list in self.url_dict.items():
+            if url_list:
+                embed = get_embed(None, None, author=self.services[service_name].SERVICE_LABEL,
+                                        icon=self.services[service_name].SERVICE_ICON)
+
+                for url in url_list:
+                    item = self.item_dict[service_name][url]
+
+                    options = []
                     try:
-                        label = entry['label']
+                        if item['option']:
+                            for i, (option_name, option) in enumerate(item['option'].items()):
+                                options.append(f"{option_name}: {option}")
 
-                        if entry['type'] is list:
-                            value = ', '.join(value)
-                        elif entry['type'] is dict:
-                            string_list = []
-                            for value_key, value_value in value.items():
-                                string_list.append(f'{value_key}: {value_value}')
-
-                            value = '\n'.join(string_list)
-
-                        embed.add_field(name=label, value=value, inline=False)
-                    except KeyError:
-                        if entry['type'] is dict:
-                            for option_label, option in value.items():
-                                embed.add_field(name=option_label, value=option, inline=False)
-
-                embed.add_field(name='URL', value=selected_url, inline=False)
-
-                await ctx.send(embed=embed)
-                return
-
-        @self.command(name='list')
-        async def list_(ctx):
-            if not await self.check_command_eligibility(ctx):
-                return
-
-            embeds = []
-
-            for service_name, url_list in self.url_dict.items():
-                if url_list:
-                    embed = await self.get_embed(None, None, author=self.services[service_name].SERVICE_LABEL,
-                                                 icon=self.services[service_name].SERVICE_ICON)
-
-                    for url in url_list:
-                        item = self.item_dict[service_name][url]
-
-                        options = []
-                        try:
-                            if item['option']:
-                                for i, (option_name, option) in enumerate(item['option'].items()):
-                                    options.append(f"{option_name}: {option}")
-
-                                options_string = '\n' + '\n'.join(options)
-                            else:
-                                options_string = ''
-                        except KeyError:
+                            options_string = '\n' + '\n'.join(options)
+                        else:
                             options_string = ''
+                    except KeyError:
+                        options_string = ''
 
-                        embed.add_field(
-                            name=item['name'],
-                            value=f"{item['price']}{options_string}",
-                            inline=False
-                        )
+                    embed.add_field(
+                        name=item['name'],
+                        value=f"{item['price']}{options_string}",
+                        inline=False
+                    )
 
-                    embeds.append(embed)
+                embeds.append(embed)
 
-            if embeds:
-                await ctx.send(embeds=embeds)
-            else:
-                await ctx.send(embed=await self.get_embed('상품 목록', '추가된 상품이 없습니다.'))
+        if embeds:
+            await interaction.response.edit_message(embeds=embeds)
+        else:
+            await interaction.response.edit_message(embed=get_embed('상품 목록', '추가된 상품이 없습니다.'))
 
     async def on_ready(self):
         print(f'Logged in as {self.user.name} | {self.user.id}')
         print('Target user ID is', self.owner_id)
-        self.owner = await self.get_or_fetch_user(self.owner_id)
+        owner = await self.get_or_fetch_user(self.owner_id)
+
+        if owner.dm_channel is None:
+            await owner.create_dm()
+
+        self.target = owner.dm_channel
 
         if self.init:
             items_count = 0
@@ -602,13 +350,13 @@ class DiscordPriceBot(commands.Bot):
                 items_count += len(url_list)
 
             if items_count:
-                await self.owner.send(embed=await self.get_embed(
-                    "봇 시작됨", "명령어 목록을 보려면 '.help'를 입력하세요.\n\n" +
-                    f'{items_count} 개의 상품을 확인 중입니다.'))
+                self.message_with_view = await self.target.send(
+                    embed=get_embed("봇 시작됨", f'{items_count} 개의 상품을 확인 중입니다.'),
+                    view=self.get_menu_view()
+                )
             else:
-                await self.owner.send(embed=await self.get_embed(
-                    "봇 시작됨", "명령어 목록을 보려면 '.help'를 입력하세요.\n\n" +
-                    f'추가된 상품이 없습니다.'))
+                self.message_with_view = await self.target.send(embed=get_embed("봇 시작됨", f'추가된 상품이 없습니다.'),
+                                                                view=self.get_menu_view())
 
             self.init = False
 
@@ -634,16 +382,17 @@ class DiscordPriceBot(commands.Bot):
                 try:
                     last_dict = deepcopy(self.item_dict)
                     await self.update_item_dict()
-                    current_dict = deepcopy(self.item_dict)
 
-                    for service_name, service_item_dict in current_dict.items():
+                    message_sent = False
+
+                    for service_name, service_item_dict in self.item_dict.items():
                         try:
                             for url, item in service_item_dict.items():
                                 last_item = last_dict[service_name][url]
 
                                 if item != last_item:
                                     print('Item status changed:', item['name'], f"({url})")
-                                    embed = await self.get_embed(
+                                    embed = get_embed(
                                          '상품 정보 변경됨', '다음 상품의 정보가 변경되었습니다.',
                                          author=self.services[service_name].SERVICE_LABEL,
                                          icon=self.services[service_name].SERVICE_ICON,
@@ -707,10 +456,15 @@ class DiscordPriceBot(commands.Bot):
                                                         embed.add_field(name=option_label, value=option, inline=False)
 
                                     embed.add_field(name='URL', value=url, inline=False)
-                                    await self.owner.send(embed=embed)
+                                    await self.target.send(embed=embed)
+                                    message_sent = True
 
                         except KeyError:  # New items
                             pass
+
+                    if message_sent:
+                        await self.message_with_view.edit(view=None)
+                        self.message_with_view = await self.target.send(view=self.get_menu_view())
 
                     await asyncio.sleep(cfg['interval'])
 
