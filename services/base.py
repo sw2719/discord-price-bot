@@ -1,10 +1,15 @@
 import abc
-from typing import Union
+from typing import Union, Dict
 
-USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'  # noqa
 
 
 class AbstractService(abc.ABC):
+    SERVICE_DEFAULT_CONFIG: Union[None, Dict[str, Union[str, int, bool]]]
+    SERVICE_NAME: str
+    SERVICE_LABEL: str
+    SERVICE_COLOR: int
+
     @abc.abstractmethod
     async def standardize_url(self, url: str) -> Union[str, None]:
         raise NotImplementedError

@@ -27,6 +27,7 @@ class NaverItem(BaseServiceItem):
 
         super().__init__(naver_dict, **kwargs)
 
+
 class NaverService(AbstractService):
     SERVICE_DEFAULT_CONFIG = {
         'login': False,
