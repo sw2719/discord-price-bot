@@ -41,7 +41,7 @@ class DiscordPriceBot(ds.Bot):
     COLOR_SUCCESS = 0x39e360
 
     def __init__(self):
-        self.init = True
+        self.initialized = False
         self.owner_id = int(cfg['user_id'])
         self.target = None
 
@@ -351,7 +351,7 @@ class DiscordPriceBot(ds.Bot):
 
         self.target = owner.dm_channel
 
-        if self.init:
+        if not self.initialized:
             items_count = 0
             for url_list in self.url_dict.values():
                 items_count += len(url_list)
@@ -366,7 +366,7 @@ class DiscordPriceBot(ds.Bot):
                                                                 view=self.get_menu_view())
 
             self.message_with_view_id = response_with_view.id
-            self.init = False
+            self.initialized = True
 
     async def check_price(self):
         print('Starting price check loop...')
