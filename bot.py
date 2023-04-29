@@ -105,7 +105,7 @@ class DiscordPriceBot(ds.Bot):
                 self.services[service.SERVICE_NAME] = service()
 
         self.command_busy = False
-        self.message_with_view = None
+        self.message_with_view_id = None
 
         asyncio.run(self.update_item_dict())
         self.bg_task = self.loop.create_task(self.check_price())
@@ -145,16 +145,17 @@ class DiscordPriceBot(ds.Bot):
                 break
         else:
             print('No substring of supported service name found in input URL: ' + input_url)
-            self.message_with_view = await interaction.edit_original_response(
+            response_with_view = await interaction.edit_original_response(
                 embed=get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR),
                 view=self.get_menu_view()
             )
+            self.message_with_view_id = response_with_view.id
             await interaction.edit_original_response(view=self.get_menu_view())
             return
 
         if len(self.url_dict[service.SERVICE_NAME]) == 25:
             print('Maximum number of items reached for service: ' + service.SERVICE_NAME)
-            self.message_with_view = await interaction.edit_original_response(
+            response_with_view = await interaction.edit_original_response(
                 embed=get_embed(
                     '추가 실패', '더 이상 해당 서비스의 상품을 추가할 수 없습니다.\n'
                     '먼저 상품을 제거하세요.',
@@ -162,6 +163,7 @@ class DiscordPriceBot(ds.Bot):
                 ),
                 view=self.get_menu_view()
             )
+            self.message_with_view_id = response_with_view.id
             return
 
         standardized_url = await service.standardize_url(input_url)
@@ -169,17 +171,19 @@ class DiscordPriceBot(ds.Bot):
 
         if standardized_url is None:
             print('Failed to standardize URL: ' + input_url)
-            self.message_with_view = await interaction.edit_original_response(
+            response_with_view = await interaction.edit_original_response(
                 embed=get_embed('추가 실패', '지원하지 않거나 올바르지 않은 URL입니다.', color=self.COLOR_ERROR),
                 view=self.get_menu_view()
             )
+            self.message_with_view_id = response_with_view.id
             return
         elif standardized_url in self.url_dict[service.SERVICE_NAME]:
             print('URL already added: ' + standardized_url)
-            self.message_with_view = await interaction.edit_original_response(
+            response_with_view = await interaction.edit_original_response(
                 embed=get_embed('추가 실패', '이미 추가된 URL입니다.', color=self.COLOR_ERROR),
                 view=self.get_menu_view()
             )
+            self.message_with_view_id = response_with_view.id
             return
         else:
             await update_context_message('일반화된 URL: ' + standardized_url)
@@ -224,7 +228,8 @@ class DiscordPriceBot(ds.Bot):
 
         embed.add_field(name='URL', value=url, inline=False)
 
-        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        self.message_with_view_id = response_with_view.id
         self.item_dict[service.SERVICE_NAME][url] = item_info
         self.save_url_dict()
 
@@ -255,7 +260,8 @@ class DiscordPriceBot(ds.Bot):
             embed.add_field(name=deleted_item['name'], value=options_string, inline=False)
 
         self.save_url_dict()
-        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        self.message_with_view_id = response_with_view.id
         return
 
     async def info(self, interaction: ds.Interaction, service_name: str, url: str):
@@ -295,7 +301,8 @@ class DiscordPriceBot(ds.Bot):
 
         embed.add_field(name='URL', value=url, inline=False)
 
-        self.message_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        self.message_with_view_id = response_with_view.id
         return
 
     async def list_(self, interaction: ds.Interaction):
@@ -350,14 +357,15 @@ class DiscordPriceBot(ds.Bot):
                 items_count += len(url_list)
 
             if items_count:
-                self.message_with_view = await self.target.send(
+                response_with_view = await self.target.send(
                     embed=get_embed("봇 시작됨", f'{items_count} 개의 상품을 확인 중입니다.'),
                     view=self.get_menu_view()
                 )
             else:
-                self.message_with_view = await self.target.send(embed=get_embed("봇 시작됨", f'추가된 상품이 없습니다.'),
+                response_with_view = await self.target.send(embed=get_embed("봇 시작됨", f'추가된 상품이 없습니다.'),
                                                                 view=self.get_menu_view())
 
+            self.message_with_view_id = response_with_view.id
             self.init = False
 
     async def check_price(self):
@@ -435,8 +443,8 @@ class DiscordPriceBot(ds.Bot):
                                                     last_value_string = '정보 없음'
 
                                                 embed.add_field(
-                                                    name=f'*{label}*',
-                                                    value=f'*{last_value_string} -> {item_value_string}*',
+                                                    name=f'__{label}__',
+                                                    value=f'__{last_value_string} -> {item_value_string}__',
                                                     inline=False)
                                                 print(f'{key}: {last_value_string} -> {item_value_string}')
                                             else:
@@ -463,8 +471,10 @@ class DiscordPriceBot(ds.Bot):
                             pass
 
                     if message_sent:
-                        await self.message_with_view.edit(view=None)
-                        self.message_with_view = await self.target.send(view=self.get_menu_view())
+                        message_with_view = self.target.fetch_message(self.message_with_view_id)
+                        await message_with_view.edit(view=None)
+                        response_with_view = await self.target.send(view=self.get_menu_view())
+                        self.message_with_view_id = response_with_view.id
 
                     await asyncio.sleep(cfg['interval'])
 
