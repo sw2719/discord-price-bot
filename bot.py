@@ -194,9 +194,9 @@ class DiscordPriceBot(ds.Bot):
         self.url_dict[service.SERVICE_NAME].append(standardized_url)
 
         embed = get_embed('상품 추가됨', '다음 상품을 추가했습니다.',
-                                color=service.SERVICE_COLOR,
-                                author=service.SERVICE_LABEL,
-                                icon=service.SERVICE_ICON)
+                          color=service.SERVICE_COLOR,
+                          author=service.SERVICE_LABEL,
+                          icon=service.SERVICE_ICON)
 
         for key, entry in item_info.items():
             value = entry['value']
@@ -310,8 +310,9 @@ class DiscordPriceBot(ds.Bot):
 
         for service_name, url_list in self.url_dict.items():
             if url_list:
-                embed = get_embed(None, None, author=self.services[service_name].SERVICE_LABEL,
-                                        icon=self.services[service_name].SERVICE_ICON)
+                embed = get_embed(None, None,
+                                  author=self.services[service_name].SERVICE_LABEL,
+                                  icon=self.services[service_name].SERVICE_ICON)
 
                 for url in url_list:
                     item = self.item_dict[service_name][url]
@@ -363,7 +364,7 @@ class DiscordPriceBot(ds.Bot):
                 )
             else:
                 response_with_view = await self.target.send(embed=get_embed("봇 시작됨", f'추가된 상품이 없습니다.'),
-                                                                view=self.get_menu_view())
+                                                            view=self.get_menu_view())
 
             self.message_with_view_id = response_with_view.id
             self.initialized = True
@@ -472,7 +473,12 @@ class DiscordPriceBot(ds.Bot):
 
                     if message_sent:
                         message_with_view = self.target.fetch_message(self.message_with_view_id)
-                        await message_with_view.edit(view=None)
+
+                        try:
+                            await message_with_view.edit(view=None)
+                        except ds.HTTPException:
+                            await message_with_view.delete()
+
                         response_with_view = await self.target.send(view=self.get_menu_view())
                         self.message_with_view_id = response_with_view.id
 
