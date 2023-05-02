@@ -472,7 +472,7 @@ class DiscordPriceBot(ds.Bot):
                             pass
 
                     if message_sent:
-                        message_with_view = self.target.fetch_message(self.message_with_view_id)
+                        message_with_view = await self.target.fetch_message(self.message_with_view_id)
 
                         try:
                             await message_with_view.edit(view=None)
