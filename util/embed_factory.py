@@ -3,7 +3,7 @@ from typing import Union
 
 
 def get_embed(title: Union[str, None], description: Union[str, None], color: int = 0x7289da,
-                    author: str = '', icon: str = '', footer: str = '', url=None) -> Embed:
+              author: str = '', icon: str = '', footer: str = '', url=None) -> Embed:
     embed = Embed(title=title, description=description, color=color, url=url)
 
     if footer:
