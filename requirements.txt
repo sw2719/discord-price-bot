@@ -4,3 +4,4 @@ py-cord
 bs4
 furl
 playwright
+fake-useragent
