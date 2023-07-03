@@ -12,6 +12,7 @@ class MenuView(discord.ui.View):
                  list_callback: Callable[[discord.Interaction], Any],
                  info_callback: Callable[[discord.Interaction, str, str], Any],
                  delete_callback: Callable[[discord.Interaction, str, List[str]], Any],
+                 interaction_callback: Callable,
                  cancel_callback: Callable[[discord.Interaction], Any]):
         """Menu button view. All callbacks must be async functions.
         :param item_dict: 상품 딕셔너리
@@ -26,11 +27,13 @@ class MenuView(discord.ui.View):
         self.list_callback = list_callback
         self.info_callback = info_callback
         self.delete_callback = delete_callback
+        self.interaction_callback = interaction_callback
         self.cancel_callback = cancel_callback
         self.item_dict = item_dict
 
     @discord.ui.button(label="추가", row=0, style=discord.ButtonStyle.green)
     async def first_button_callback(self, _, interaction):
+        await self.interaction_callback()
         await interaction.response.send_modal(AddModal(self, self.add_callback))
 
     @discord.ui.button(label="상품 목록", row=0, style=discord.ButtonStyle.primary)
@@ -47,6 +50,7 @@ class MenuView(discord.ui.View):
                 embed=get_embed(title='상품 정보 보기', description='추가된 상품이 없습니다.')
             )
             return
+        await self.interaction_callback()
         await interaction.response.edit_message(
             embed=get_embed(title='상품 정보 보기', description='정보를 볼 상품을 선택하세요.'),
             view=ItemSelectorView(self.services, self.item_dict, self.info_callback, self.cancel_callback)
@@ -62,6 +66,7 @@ class MenuView(discord.ui.View):
                 embed=get_embed(title='상품 삭제', description='추가된 상품이 없습니다.')
             )
             return
+        await self.interaction_callback()
         await interaction.response.edit_message(
             embed=get_embed(title='상품 삭제', description='삭제할 상품을 선택하세요.'),
             view=ItemSelectorView(self.services, self.item_dict, self.delete_callback, self.cancel_callback, select_multiple=True)

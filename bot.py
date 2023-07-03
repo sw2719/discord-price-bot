@@ -14,9 +14,10 @@ from views.menu import MenuView
 from services.coupang import CoupangService
 from services.danawa import DanawaService
 from services.naver import NaverService
+from services.eleventhst import EleventhStreetService
 
 # Add service class here to add new service
-SERVICES = (CoupangService, DanawaService, NaverService)
+SERVICES = (CoupangService, DanawaService, NaverService, EleventhStreetService)
 
 
 def reset_cfg():
@@ -44,6 +45,7 @@ class DiscordPriceBot(ds.Bot):
         self.initialized = False
         self.owner_id = int(cfg['user_id'])
         self.target = None
+        self.interaction = False
 
         intents = ds.Intents.default()
         intents.members = True  # noqa
@@ -121,10 +123,14 @@ class DiscordPriceBot(ds.Bot):
         await asyncio.gather(*[get(service) for service in self.services.values()])
 
     def get_menu_view(self):
-        return MenuView(self.services, self.item_dict, self.add, self.list_, self.info, self.delete, self.select_cancel)
+        return MenuView(self.services, self.item_dict, self.add, self.list_, self.info, self.delete, self.interaction_start, self.select_cancel)
+
+    async def interaction_start(self):
+        self.interaction = True
 
     async def select_cancel(self, interaction: ds.Interaction):
         await interaction.edit_original_response(content=None, embed=None, view=self.get_menu_view())
+        self.interaction = False
 
     async def add(self, interaction: ds.Interaction, input_url: str):
         print('Trying to add URL:', input_url)
@@ -151,6 +157,7 @@ class DiscordPriceBot(ds.Bot):
             )
             self.message_with_view_id = response_with_view.id
             await interaction.edit_original_response(view=self.get_menu_view())
+            self.interaction = False
             return
 
         if len(self.url_dict[service.SERVICE_NAME]) == 25:
@@ -164,6 +171,7 @@ class DiscordPriceBot(ds.Bot):
                 view=self.get_menu_view()
             )
             self.message_with_view_id = response_with_view.id
+            self.interaction = False
             return
 
         standardized_url = await service.standardize_url(input_url)
@@ -176,6 +184,7 @@ class DiscordPriceBot(ds.Bot):
                 view=self.get_menu_view()
             )
             self.message_with_view_id = response_with_view.id
+            self.interaction = False
             return
         elif standardized_url in self.url_dict[service.SERVICE_NAME]:
             print('URL already added: ' + standardized_url)
@@ -184,6 +193,7 @@ class DiscordPriceBot(ds.Bot):
                 view=self.get_menu_view()
             )
             self.message_with_view_id = response_with_view.id
+            self.interaction = False
             return
         else:
             await update_context_message('일반화된 URL: ' + standardized_url)
@@ -229,6 +239,7 @@ class DiscordPriceBot(ds.Bot):
         embed.add_field(name='URL', value=url, inline=False)
 
         response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
+        self.interaction = False
         self.message_with_view_id = response_with_view.id
         self.item_dict[service.SERVICE_NAME][url] = item_info
         self.save_url_dict()
@@ -262,6 +273,7 @@ class DiscordPriceBot(ds.Bot):
         self.save_url_dict()
         response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
         self.message_with_view_id = response_with_view.id
+        self.interaction = False
         return
 
     async def info(self, interaction: ds.Interaction, service_name: str, url: str):
@@ -303,6 +315,7 @@ class DiscordPriceBot(ds.Bot):
 
         response_with_view = await interaction.edit_original_response(embed=embed, view=self.get_menu_view())
         self.message_with_view_id = response_with_view.id
+        self.interaction = False
         return
 
     async def list_(self, interaction: ds.Interaction):
@@ -392,7 +405,7 @@ class DiscordPriceBot(ds.Bot):
                     last_dict = deepcopy(self.item_dict)
                     await self.update_item_dict()
 
-                    message_sent = False
+                    embeds_to_send = []
 
                     for service_name, service_item_dict in self.item_dict.items():
                         try:
@@ -465,13 +478,32 @@ class DiscordPriceBot(ds.Bot):
                                                         embed.add_field(name=option_label, value=option, inline=False)
 
                                     embed.add_field(name='URL', value=url, inline=False)
-                                    await self.target.send(embed=embed)
-                                    message_sent = True
+                                    embeds_to_send.append(embed)
 
                         except KeyError:  # New items
                             pass
 
-                    if message_sent:
+                    if embeds_to_send:
+                        if self.interaction:
+                            print('Waiting for interaction to end...')
+                            while True:
+                                if not self.interaction:
+                                    await asyncio.sleep(3)
+                                    break
+                                await asyncio.sleep(1)
+
+                        if len(embeds_to_send) <= 10:
+                            await self.target.send(embeds=embeds_to_send)
+                        else:
+                            buffer = []
+                            for i, embed in enumerate(embeds_to_send):
+                                i += 1
+                                buffer.append(embed)
+
+                                if i % 10 == 0:
+                                    await self.target.send(embeds=buffer)
+                                    buffer = []
+
                         message_with_view = await self.target.fetch_message(self.message_with_view_id)
 
                         try:
