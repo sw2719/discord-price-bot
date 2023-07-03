@@ -39,6 +39,8 @@ class EleventhStreetService(AbstractService):
         pprint('11st service initialized.')
 
     async def standardize_url(self, url) -> Union[str, None]:
+        if 'https://' not in url:
+            url.replace('http://', 'https://')
         if 'share?gsreferrer=' in url:
             url = str(re.sub('/share\?gsreferrer=.*', '', url))
 
