@@ -92,6 +92,8 @@ class DiscordPriceBot(ds.Bot):
                         cfg[service.SERVICE_NAME] = deepcopy(service.SERVICE_DEFAULT_CONFIG)
                         config_updated = True
                         break
+            else:
+                print(f'No config required for {service.SERVICE_NAME}')
 
         if config_updated:
             with open('config.json', 'w') as f:
@@ -101,6 +103,7 @@ class DiscordPriceBot(ds.Bot):
             sys.exit(1)
 
         for service in SERVICES:
+            print('Initializing service:', service.SERVICE_NAME)
             if service.SERVICE_DEFAULT_CONFIG is not None:
                 self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME])
             else:
