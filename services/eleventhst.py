@@ -40,12 +40,18 @@ class EleventhStreetService(AbstractService):
 
     async def standardize_url(self, url) -> Union[str, None]:
         if 'share?gsreferrer=' in url:
-            return str(re.sub('/share\?gsreferrer=.*', '', url))
+            url = str(re.sub('/share\?gsreferrer=.*', '', url))
 
         if 'https://www.11st.co.kr/products' in url:
             return url.split('?')[0]
-        elif 'http://m.11st.co.kr/products/m' in url:
-            return url.split('?')[0]
+        elif 'https://m.11st.co.kr/products/m' in url:
+            url = url.split('?')[0]
+            url = url.replace('https://m', 'https://www')
+
+            if '/ma/' in url:
+                return url.replace('/ma/', '/')
+            elif '/m/' in url:
+                return url.replace('/m/', '/')
 
         return None
 
