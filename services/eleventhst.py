@@ -94,8 +94,8 @@ class EleventhStreetService(AbstractService):
             return url, item
 
         product_page = await context.new_page()
-        await product_page.goto('https://www.11st.co.kr/')
-        await product_page.goto(url)
+        await product_page.goto('https://www.11st.co.kr/', timeout=20000)
+        await product_page.goto(url, timeout=20000)
         await product_page.wait_for_load_state('networkidle')
 
         item_name = await product_page.wait_for_selector('h1.title')
