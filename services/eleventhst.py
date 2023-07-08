@@ -34,8 +34,10 @@ class EleventhStreetService(AbstractService):
     SERVICE_LABEL = '11번가'
     SERVICE_COLOR = 0xea3a40
     SERVICE_ICON = get_favicon('https://www.11st.co.kr/')
+    SERVICE_USES_PLAYWRIGHT = True
 
-    def __init__(self):
+    def __init__(self, chromium_path=None):
+        self.chromium_path = chromium_path
         pprint('11st service initialized.')
 
     async def standardize_url(self, url) -> Union[str, None]:
@@ -60,7 +62,7 @@ class EleventhStreetService(AbstractService):
     async def fetch_items(self, url_list: list) -> dict:
         if url_list:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
+                browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(10000)
@@ -82,7 +84,7 @@ class EleventhStreetService(AbstractService):
     async def get_product_info(self, url: str, context: BrowserContext = None) -> Tuple[str, EleventhStreetItem]:
         if context is None:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
+                browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(10000)

@@ -10,6 +10,7 @@ class AbstractService(abc.ABC):
     SERVICE_NAME: str
     SERVICE_LABEL: str
     SERVICE_COLOR: int
+    SERVICE_USES_PLAYWRIGHT: bool = False
 
     @abc.abstractmethod
     async def standardize_url(self, url: str) -> Union[str, None]:

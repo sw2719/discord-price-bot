@@ -24,7 +24,8 @@ def reset_cfg():
     default = {"token": "",
                "user_id": "",
                "interval": 60,
-               "test_mode": False
+               "test_mode": False,
+               "chromium_executable_override": ""
                }
 
     for service in SERVICES:
@@ -102,9 +103,18 @@ class DiscordPriceBot(ds.Bot):
             print('Updated config file. Please review and edit settings as needed.')
             sys.exit(1)
 
+        if cfg['chromium_executable_override'] != "" and os.path.exists(cfg['chromium_executable_override']):
+            chromium_path = cfg['chromium_executable_override']
+        else:
+            chromium_path = None
+
         for service in SERVICES:
             print('Initializing service:', service.SERVICE_NAME)
-            if service.SERVICE_DEFAULT_CONFIG is not None:
+            if service.SERVICE_USES_PLAYWRIGHT and service.SERVICE_DEFAULT_CONFIG is not None:
+                self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME], chromium_path)
+            elif service.SERVICE_USES_PLAYWRIGHT:
+                self.services[service.SERVICE_NAME] = service(chromium_path)
+            elif service.SERVICE_DEFAULT_CONFIG is not None:
                 self.services[service.SERVICE_NAME] = service(cfg[service.SERVICE_NAME])
             else:
                 self.services[service.SERVICE_NAME] = service()

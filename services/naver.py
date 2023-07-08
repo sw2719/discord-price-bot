@@ -38,11 +38,13 @@ class NaverService(AbstractService):
     SERVICE_LABEL = '네이버'
     SERVICE_COLOR = 0x5ECC69
     SERVICE_ICON = get_favicon('https://www.naver.com/')
+    SERVICE_USES_PLAYWRIGHT = True
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, chromium_path=None):
         self.LOGIN = cfg['login']
         self.NAVER_ID = cfg['id']
         self.NAVER_PW = cfg['password']
+        self.chromium_path = chromium_path
 
         if not self.LOGIN:
             pprint("Warning: login is disabled. "
@@ -95,7 +97,7 @@ class NaverService(AbstractService):
     async def fetch_items(self, url_list: list) -> dict:
         if url_list:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
+                browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(10000)
@@ -120,7 +122,7 @@ class NaverService(AbstractService):
     async def get_product_info(self, url: str, context: BrowserContext = None) -> Tuple[str, NaverItem]:
         if context is None:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=HEADLESS, slow_mo=DELAY)
+                browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(10000)
