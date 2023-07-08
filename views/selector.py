@@ -119,6 +119,9 @@ class ItemSelectorView(discord.ui.View):
                 else:
                     item_options_lines.pop()
 
+            if len(label) > 100:
+                label = label[:98] + '...'
+
             options.append(discord.SelectOption(label=label, value=url, description=item_options_string))
 
         self.item_selector = ItemSelector(service_name, options, self._callback, self.select_multiple)
