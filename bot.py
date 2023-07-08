@@ -105,6 +105,7 @@ class DiscordPriceBot(ds.Bot):
 
         if cfg['chromium_executable_override'] != "" and os.path.exists(cfg['chromium_executable_override']):
             chromium_path = cfg['chromium_executable_override']
+            print('Using chromium path:', chromium_path)
         else:
             chromium_path = None
 
@@ -122,6 +123,7 @@ class DiscordPriceBot(ds.Bot):
         self.command_busy = False
         self.message_with_view_id = None
 
+        print('Initializing item dict...')
         asyncio.run(self.update_item_dict())
         self.bg_task = self.loop.create_task(self.check_price())
 
