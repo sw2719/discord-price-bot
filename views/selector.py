@@ -120,7 +120,7 @@ class ItemSelectorView(discord.ui.View):
                     item_options_lines.pop()
 
             if len(label) > 100:
-                label = label[:98] + '...'
+                label = label[:97] + '...'
 
             options.append(discord.SelectOption(label=label, value=url, description=item_options_string))
 
