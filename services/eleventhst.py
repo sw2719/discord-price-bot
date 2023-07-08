@@ -107,13 +107,13 @@ class EleventhStreetService(AbstractService):
         price = price.strip()
 
         try:
-            await product_page.wait_for_selector('dl > div.coupon', timeout=100)
+            await product_page.wait_for_selector('dl > div.coupon', timeout=500)
             coupon = '있음'
         except PlaywrightTimeoutError:
             coupon = '없음'
 
         try:
-            agency_fee = await product_page.wait_for_selector('div.c_product_agency_fee > div > dl > dd', timeout=100)
+            agency_fee = await product_page.wait_for_selector('div.c_product_agency_fee > div > dl > dd', timeout=500)
             agency_fee = await agency_fee.text_content()
 
             if '없음' in agency_fee:
@@ -125,9 +125,9 @@ class EleventhStreetService(AbstractService):
             agency_fee = '해외직구 상품 아님'
 
         try:
-            delivery = await product_page.wait_for_selector('div.delivery', timeout=100)
+            delivery = await product_page.wait_for_selector('div.delivery', timeout=500)
         except PlaywrightTimeoutError:
-            delivery = await product_page.wait_for_selector('div.delivery_abroad', timeout=100)
+            delivery = await product_page.wait_for_selector('div.delivery_abroad', timeout=500)
 
         delivery = await delivery.text_content()
 
@@ -137,7 +137,7 @@ class EleventhStreetService(AbstractService):
             delivery = '유료배송'
 
         try:
-            thumbnail = await product_page.wait_for_selector('#productImg > div > img', timeout=100)
+            thumbnail = await product_page.wait_for_selector('#productImg > div > img', timeout=500)
         except PlaywrightTimeoutError:
             thumbnail = await product_page.wait_for_selector(
                 'div.l_product_side_view > div.c_product_view_img > div.img_full.img_full_height > img'
