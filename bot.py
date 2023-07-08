@@ -531,8 +531,8 @@ if __name__ == '__main__':
     print('Python version:', sys.version)
 
     # 파이썬 3.8 이상 & Windows 환경에서 실행하는 경우
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    #if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
+        #asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     if not os.path.isfile('config.json'):
         print('config.json not found. Creating new config file. Please fill in the required information.')
