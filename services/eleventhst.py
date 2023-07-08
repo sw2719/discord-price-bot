@@ -65,7 +65,7 @@ class EleventhStreetService(AbstractService):
                 browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
-                context.set_default_timeout(10000)
+                context.set_default_timeout(20000)
 
                 results = await asyncio.gather(*[self.get_product_info(url, context) for url in url_list])
 
@@ -87,7 +87,7 @@ class EleventhStreetService(AbstractService):
                 browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
-                context.set_default_timeout(10000)
+                context.set_default_timeout(20000)
 
                 url, item = await self.get_product_info(url, context)
                 await context.close()
@@ -98,7 +98,7 @@ class EleventhStreetService(AbstractService):
         product_page = await context.new_page()
         await product_page.goto('https://www.11st.co.kr/', timeout=20000)
         await product_page.goto(url, timeout=20000)
-        await product_page.wait_for_load_state('networkidle')
+        await product_page.wait_for_load_state()
 
         item_name = await product_page.wait_for_selector('h1.title')
         item_name = await item_name.text_content()
