@@ -508,7 +508,7 @@ class DiscordPriceBot(ds.Bot):
                                 await asyncio.sleep(1)
 
                         if len(embeds_to_send) <= 10:
-                            await self.target.send(embeds=embeds_to_send)
+                            await self.target.send(f'<@{self.owner_id}>', embeds=embeds_to_send)
                         else:
                             buffer = []
                             for i, embed in enumerate(embeds_to_send):
@@ -516,7 +516,7 @@ class DiscordPriceBot(ds.Bot):
                                 buffer.append(embed)
 
                                 if i % 10 == 0:
-                                    await self.target.send(embeds=buffer)
+                                    await self.target.send(f'<@{self.owner_id}>', embeds=buffer)
                                     buffer = []
 
                         message_with_view = await self.target.fetch_message(self.message_with_view_id)
