@@ -15,9 +15,10 @@ from services.coupang import CoupangService
 from services.danawa import DanawaService
 from services.naver import NaverService
 from services.eleventhst import EleventhStreetService
+from services.univstore import UnivStoreService
 
 # Add service class here to add new service
-SERVICES = (CoupangService, DanawaService, NaverService, EleventhStreetService)
+SERVICES = (CoupangService, DanawaService, NaverService, EleventhStreetService, UnivStoreService)
 
 
 def reset_cfg():
@@ -215,7 +216,20 @@ class DiscordPriceBot(ds.Bot):
 
         print('Fetching item info...')
         await update_context_message('상품 정보를 가져오는 중...')
-        url, item_info = await service.get_product_info(standardized_url)
+
+        try:
+            async with asyncio.timeout(15):
+                url, item_info = await service.get_product_info(standardized_url)
+        except TimeoutError:
+            print('Timeout while fetching item status of URL: ' + input_url)
+            response_with_view = await interaction.edit_original_response(
+                embed=get_embed('추가 실패', '상품 정보를 가져오는 데 실패했습니다.', color=self.COLOR_ERROR),
+                view=self.get_menu_view()
+            )
+            self.message_with_view_id = response_with_view.id
+            self.interaction = False
+            return
+
         self.url_dict[service.SERVICE_NAME].append(standardized_url)
 
         embed = get_embed('상품 추가됨', '다음 상품을 추가했습니다.',
@@ -500,7 +514,7 @@ class DiscordPriceBot(ds.Bot):
 
                     if embeds_to_send:
                         if self.interaction:
-                            print('Waiting for interaction to end...')
+                            print('Waiting for interaction to finish...')
                             while True:
                                 if not self.interaction:
                                     await asyncio.sleep(3)
@@ -516,7 +530,7 @@ class DiscordPriceBot(ds.Bot):
                                 buffer.append(embed)
 
                                 if i % 10 == 0:
-                                    await self.target.send(f'<@{self.owner_id}>', embeds=buffer)
+                                    await self.target.send(f'<@{self.owner_id}> 상품 정보 변동 알림', embeds=buffer)
                                     buffer = []
 
                         message_with_view = await self.target.fetch_message(self.message_with_view_id)
