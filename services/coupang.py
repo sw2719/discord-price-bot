@@ -69,7 +69,7 @@ class CoupangService(AbstractService):
 
         #self.SERVICE_ICON = get_favicon('https://www.coupang.com/', headers=self.header)
         self.SERVICE_ICON = 'https://image9.coupangcdn.com/image/coupang/favicon/v2/favicon.ico'
-        pprint('Coupang service initialized.')
+        pprint('coupang service initialized.')
 
     async def standardize_url(self, input_string: str) -> Union[str, None]:
         """Standardize given Coupang URL to www.coupang.com/vp/products/... format.

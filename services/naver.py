@@ -49,7 +49,7 @@ class NaverService(AbstractService):
         if not self.LOGIN:
             pprint("Warning: login is disabled. "
                    "Maximum points will be inaccurate and benefit price won't be available")
-        pprint('Naver service initialized.')
+        pprint('naver service initialized.')
 
     async def standardize_url(self, url) -> Union[str, None]:
         if 'naver.me' in url:

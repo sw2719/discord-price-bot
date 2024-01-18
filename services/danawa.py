@@ -34,7 +34,7 @@ class DanawaService(AbstractService):
     SERVICE_ICON = 'https://img.danawa.com/new/tour/img/logo/sns_danawa.jpg'
 
     def __init__(self):
-        pprint('Danawa service initialized.')
+        pprint('danawa service initialized.')
 
     async def standardize_url(self, url: str) -> Union[str, None]:
         if 'danawa.page.link' in url:  # Mobile App Share URL to Mobile Web URL
