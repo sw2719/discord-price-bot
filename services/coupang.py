@@ -4,7 +4,7 @@ import aiohttp
 from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
-from services.base import AbstractService, BaseServiceItem, USER_AGENT
+from services.base import AbstractService, BaseServiceItem, USER_AGENT, TIMEOUT
 from util.favicon import get_favicon
 
 
@@ -119,7 +119,7 @@ class CoupangService(AbstractService):
             return None
 
     async def fetch_items(self, url_list: list) -> dict:
-        async with aiohttp.ClientSession(headers=self.header) as session:
+        async with aiohttp.ClientSession(headers=self.header, timeout=TIMEOUT) as session:
             if self.LOGIN:
                 await self._login(session)
             results = await asyncio.gather(*[self.get_product_info(url, session) for url in url_list])
@@ -134,7 +134,7 @@ class CoupangService(AbstractService):
     async def get_product_info(self, url: str, session: aiohttp.ClientSession = None) -> Tuple[str, CoupangItem]:
         # TODO: Rewrite this disaster
         if not session:
-            async with aiohttp.ClientSession(headers=self.header) as session:
+            async with aiohttp.ClientSession(headers=self.header, timeout=TIMEOUT) as session:
                 return await self.get_product_info(url, session)
 
         async with session.get(url) as r:

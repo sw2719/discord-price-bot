@@ -6,6 +6,7 @@ import logging
 import traceback
 from copy import deepcopy
 
+import aiohttp
 import discord as ds  # noqa
 from discord.ext.commands import NotOwner  # noqa
 
@@ -218,10 +219,9 @@ class DiscordPriceBot(ds.Bot):
         await update_context_message('상품 정보를 가져오는 중...')
 
         try:
-            async with asyncio.timeout(15):
-                url, item_info = await service.get_product_info(standardized_url)
-        except TimeoutError:
-            print('Timeout while fetching item status of URL: ' + input_url)
+            url, item_info = await service.get_product_info(standardized_url)
+        except aiohttp.client.ClientError as e:
+            print(e, 'while fetching item status of URL: ' + input_url)
             response_with_view = await interaction.edit_original_response(
                 embed=get_embed('추가 실패', '상품 정보를 가져오는 데 실패했습니다.', color=self.COLOR_ERROR),
                 view=self.get_menu_view()
@@ -548,7 +548,7 @@ class DiscordPriceBot(ds.Bot):
                 except Exception as e:
                     print(f'Price check failed with exception {e}')
                     traceback.print_tb(e.__traceback__)
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(cfg['interval'])
 
 
 if __name__ == '__main__':

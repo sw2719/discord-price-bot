@@ -4,11 +4,9 @@ import re
 import aiohttp
 
 from typing import Union, Tuple
-from furl import furl
 from bs4 import BeautifulSoup
 
-from services.base import AbstractService, BaseServiceItem, USER_AGENT
-from util.favicon import get_favicon
+from services.base import AbstractService, BaseServiceItem, USER_AGENT, TIMEOUT
 
 
 def pprint(*args, **kwargs):
@@ -51,6 +49,7 @@ class UnivStoreService(AbstractService):
         else:
             self.jar = aiohttp.CookieJar()
             if os.path.isfile('cookies/univstore'):
+                pprint('Loading saved cookie...')
                 self.jar.load('cookies/univstore')
 
         pprint('univstore service initialized.')
@@ -65,6 +64,7 @@ class UnivStoreService(AbstractService):
         await session.get('https://univstore.com/')
         async with session.get('https://univstore.com/user/login') as r:
             if 'login' in str(r.url):
+                pprint("Autologin cookie doesn't exist or has expired. Logging in...")
                 # Login POST data schema
                 # userid: Username
                 # password: Password
@@ -75,7 +75,7 @@ class UnivStoreService(AbstractService):
         self.jar.save('cookies/univstore')
 
     async def fetch_items(self, url_list: list) -> dict:
-        async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar) as session:
+        async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar, timeout=TIMEOUT) as session:
             if self.LOGIN:
                 await self._login(session)
             results = await asyncio.gather(*[self.get_product_info(url, session) for url in url_list])
@@ -89,7 +89,7 @@ class UnivStoreService(AbstractService):
 
     async def get_product_info(self, url: str, session: aiohttp.ClientSession = None) -> Tuple[str, UnivStoreItem]:
         if not session:
-            async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar) as session:
+            async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar, timeout=TIMEOUT) as session:
                 if self.LOGIN:
                     await self._login(session)
                 return await self.get_product_info(url, session)

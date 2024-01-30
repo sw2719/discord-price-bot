@@ -1,8 +1,10 @@
 import abc
 from fake_useragent import UserAgent
+from aiohttp import ClientTimeout
 from typing import Union, Dict
 
 USER_AGENT = UserAgent().chrome
+TIMEOUT = ClientTimeout(total=30)
 
 
 class AbstractService(abc.ABC):

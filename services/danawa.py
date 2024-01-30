@@ -4,7 +4,7 @@ import ssl
 from typing import Union, Tuple
 from furl import furl
 from bs4 import BeautifulSoup
-from services.base import AbstractService, BaseServiceItem, USER_AGENT
+from services.base import AbstractService, BaseServiceItem, USER_AGENT, TIMEOUT
 
 context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
 context.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
@@ -52,7 +52,7 @@ class DanawaService(AbstractService):
         return url
 
     async def fetch_items(self, url_list: list) -> dict:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
             results = await asyncio.gather(*[self.get_product_info(url, session) for url in url_list])
 
         result_dict = {}
@@ -64,7 +64,7 @@ class DanawaService(AbstractService):
 
     async def get_product_info(self, url: str, session: aiohttp.ClientSession = None) -> Tuple[str, DanawaItem]:
         if not session:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=TIMEOUT) as session:
                 return await self.get_product_info(url, session)
 
         async with session.get(url, ssl=context) as r:
