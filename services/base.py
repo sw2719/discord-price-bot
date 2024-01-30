@@ -1,7 +1,7 @@
 import abc
 from fake_useragent import UserAgent
 from aiohttp import ClientTimeout
-from typing import Union, Dict
+from typing import Union, Dict, Any
 
 USER_AGENT = UserAgent().chrome
 TIMEOUT = ClientTimeout(total=30)
@@ -59,7 +59,7 @@ class BaseServiceItem:
     def items(self):
         return self.dict.items()
 
-    def __getitem__(self, key) -> Union[str, int]:
+    def __getitem__(self, key) -> Any:
         return self.dict[key]['value']
 
     def __setitem__(self, key, value) -> None:
