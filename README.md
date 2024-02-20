@@ -2,7 +2,7 @@
 상품 페이지 URL을 입력해두면 상품 정보 변동시 디스코드로 알려주는 디스코드 봇입니다.
 
 # 사용 방법
-* 먼저 의존성을 설치합니다. (requirements.txt 참조)
+* 먼저 의존성을 설치합니다. (pip install -r requirements.txt)
 * 봇을 1회 실행 후 생성된 config.json에 설정 값을 입력합니다.
   - 설정 값 정보 추후 추가 예정
 * Discord 개발자 포털의 자신의 봇 설정에서 Privileged Gateway Intents에 있는 Server Members Intent를 켜줘야 제대로 작동합니다.
