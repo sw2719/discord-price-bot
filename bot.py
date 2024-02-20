@@ -573,5 +573,8 @@ if __name__ == '__main__':
         except KeyError:
             reset_cfg()
 
+    if not os.path.isdir('cookies'):
+        os.mkdir('cookies')
+
     bot = DiscordPriceBot()
     bot.run(cfg['token'])
