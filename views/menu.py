@@ -1,7 +1,7 @@
 import discord  # noqa
 from typing import Callable, Dict, Any, List
 from views.add import AddModal
-from views.selector import ItemSelectorView
+from views.select import ItemSelectView
 from services.base import AbstractService, BaseServiceItem
 from util.embed_factory import get_embed
 
@@ -53,7 +53,7 @@ class MenuView(discord.ui.View):
         await self.interaction_callback()
         await interaction.response.edit_message(
             embed=get_embed(title='상품 정보 보기', description='정보를 볼 상품을 선택하세요.'),
-            view=ItemSelectorView(self.services, self.item_dict, self.info_callback, self.cancel_callback)
+            view=ItemSelectView(self.services, self.item_dict, self.info_callback, self.cancel_callback)
         )
 
     @discord.ui.button(label="삭제", row=0, style=discord.ButtonStyle.danger)
@@ -69,5 +69,5 @@ class MenuView(discord.ui.View):
         await self.interaction_callback()
         await interaction.response.edit_message(
             embed=get_embed(title='상품 삭제', description='삭제할 상품을 선택하세요.'),
-            view=ItemSelectorView(self.services, self.item_dict, self.delete_callback, self.cancel_callback, select_multiple=True)
+            view=ItemSelectView(self.services, self.item_dict, self.delete_callback, self.cancel_callback, select_multiple=True)
         )

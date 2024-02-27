@@ -5,7 +5,7 @@ from typing import Callable, Dict, List
 from services.base import AbstractService, BaseServiceItem
 
 
-class ItemSelector(discord.ui.Select):
+class ItemSelect(discord.ui.Select):
     def __init__(self, service_name: str, options: List[discord.SelectOption], callback: Callable, select_multiple):
         if select_multiple:
             max_values = len(options)
@@ -34,7 +34,7 @@ class ItemSelector(discord.ui.Select):
             await self._callback(interaction, self.service, selected_item_url)
 
 
-class ServiceSelector(discord.ui.Select):
+class ServiceSelect(discord.ui.Select):
     def __init__(self, services: Dict[str, AbstractService], item_dict: Dict[str, Dict[str, BaseServiceItem]], options: List[discord.SelectOption]):
         self.item_dict = item_dict
 
@@ -60,20 +60,20 @@ class ServiceSelector(discord.ui.Select):
             else:
                 option.default = False
 
-        self.view.add_item_selector(service, self.item_dict[service])
+        self.view.add_item_select(service, self.item_dict[service])
         await interaction.response.defer()
         await interaction.edit_original_response(view=self.view)
 
 
-class ItemSelectorView(discord.ui.View):
+class ItemSelectView(discord.ui.View):
     def __init__(self, services: Dict[str, AbstractService], item_dict: Dict[str, Dict[str, BaseServiceItem]],
                  callback: Callable, cancel_callback: Callable, select_multiple: bool = False):
         """"""
         super().__init__()
         self._callback = callback
         self._cancel_callback = cancel_callback
-        self.item_selector_added = False
-        self.item_selector = None
+        self.item_select_added = False
+        self.item_select = None
         self.select_multiple = select_multiple
 
         options = [discord.SelectOption(label=services[service_name].SERVICE_LABEL,
@@ -81,22 +81,22 @@ class ItemSelectorView(discord.ui.View):
                                         description=f'{len(items)}개 추가됨')
                    for service_name, items in item_dict.items() if items]
 
-        service_selector = ServiceSelector(services, item_dict, options)
-        self.add_item(service_selector)
+        service_select = ServiceSelect(services, item_dict, options)
+        self.add_item(service_select)
 
         if len(options) == 1:
-            self.add_item_selector(options[0].value, item_dict[options[0].value])
+            self.add_item_select(options[0].value, item_dict[options[0].value])
 
     @discord.ui.button(label="취소", row=4, style=discord.ButtonStyle.primary)
     async def first_button_callback(self, _, interaction):
         await interaction.response.defer()
         await self._cancel_callback(interaction)
 
-    def add_item_selector(self, service_name, service_dict: Dict[str, BaseServiceItem]):
-        if self.item_selector_added:
-            self.remove_item(self.item_selector)
+    def add_item_select(self, service_name, service_dict: Dict[str, BaseServiceItem]):
+        if self.item_select_added:
+            self.remove_item(self.item_select)
         else:
-            self.item_selector_added = True
+            self.item_select_added = True
 
         options = []
         for url, item in service_dict.items():
@@ -124,5 +124,5 @@ class ItemSelectorView(discord.ui.View):
 
             options.append(discord.SelectOption(label=label, value=url, description=item_options_string))
 
-        self.item_selector = ItemSelector(service_name, options, self._callback, self.select_multiple)
-        self.add_item(self.item_selector)
+        self.item_select = ItemSelect(service_name, options, self._callback, self.select_multiple)
+        self.add_item(self.item_select)
