@@ -213,6 +213,8 @@ class CoupangService(AbstractService):
                             card_set.append('삼성')
                         elif 'bc' in img_src:
                             card_set.append('BC')
+                        elif 'nh' in img_src:
+                            card_set.append('농협')
                 card_sets.append(card_set)
 
             for i in range(len(rates)):
