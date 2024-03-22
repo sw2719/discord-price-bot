@@ -22,6 +22,7 @@ class NaverItem(BaseServiceItem):
             'price': {'label': '가격', 'type': str, 'value': ''},
             'benefit_price': {'label': '혜택가', 'type': str, 'value': ''},
             'max_point': {'label': '최대 적립 포인트', 'type': str, 'value': ''},
+            'availability': {'label': '재고', 'type': str, 'value': ''},
             'thumbnail': {'type': str, 'value': ''}
         }
 
@@ -150,16 +151,17 @@ class NaverService(AbstractService):
         )
         current_price = await current_price.text_content() + '원'
 
-        max_point = await product_page.wait_for_selector(
-            '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
-            'div._2a18RJADk5 > div._3gd5biYh9U > div > div > span',
-        )
-        max_point = await max_point.text_content() + '원'
-
         thumbnail = await product_page.wait_for_selector(
-            '#content > div > div._2-I30XS1lA > div.-g-2PI3RtF > div._367LI5Az0t > div._2tT_gkmAOr._3CdGr9Fejo > img'
+            '#content > div > div._2-I30XS1lA > div._3rXou9cfw2 > div.bd_23RhM > div.bd_1uFKu > img'
         )
         thumbnail = await thumbnail.get_attribute('src')
+
+        oos = '이 상품은 현재 구매하실 수 없는 상품입니다.' in await product_page.content()
+
+        if oos:
+            availability = '품절'
+        else:
+            availability = '재고 있음'
 
         if self.LOGIN:
             try:
@@ -170,14 +172,26 @@ class NaverService(AbstractService):
                 benefit_price = await benefit_price.text_content() + '원'
             except PlaywrightTimeoutError:
                 benefit_price = ''
+
+            try:
+                max_point = await product_page.wait_for_selector(
+                    '#content > div > div._2-I30XS1lA > div._2QCa6wHHPy > fieldset > '
+                    'div._2a18RJADk5 > div._3gd5biYh9U > div > div > span',
+                )
+                max_point = await max_point.text_content() + '원'
+            except PlaywrightTimeoutError:
+                benefit_price = ''
+                max_point = ''
         else:
             benefit_price = ''
+            max_point = ''
 
         item = NaverItem(
             name=item_name,
             price=current_price,
             benefit_price=benefit_price,
             max_point=max_point,
+            availability=availability,
             thumbnail=thumbnail
         )
 
@@ -185,10 +199,11 @@ class NaverService(AbstractService):
 
 
 if __name__ == '__main__':
+    use_login = True if input('Use login? (y/N): ').strip().lower() == 'y' else False
     naver = NaverService({
-        'login': True,
-        'id': input('Enter naver ID: '),
-        'password': input('Enter naver PW: ')
+        'login': use_login,
+        'id': input('Enter naver ID: ') if use_login else '',
+        'password': input('Enter naver PW: ') if use_login else ''
     })
     print('Naver module test')
     test_url = input('Enter naver shopping URL: ')
