@@ -1,6 +1,9 @@
+import json
 import re
 import asyncio
 import aiohttp
+import os
+
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError, BrowserContext
 from typing import Union, Tuple
 from services.base import AbstractService, BaseServiceItem, USER_AGENT
@@ -51,6 +54,15 @@ class NaverService(AbstractService):
         if not self.LOGIN:
             pprint("Warning: login is disabled. "
                    "Maximum points will be inaccurate and benefit price won't be available")
+            self.cookies = []
+        else:
+            if os.path.isfile('cookies/naver'):
+                pprint('Loading saved cookie...')
+                with open("cookies/naver", "r") as f:
+                    self.cookies = json.loads(f.read())
+            else:
+                self.cookies = []
+
         pprint('naver service initialized.')
 
     async def standardize_url(self, url) -> Union[str, None]:
@@ -73,6 +85,11 @@ class NaverService(AbstractService):
     async def _login(self, context: BrowserContext) -> None:
         main_page = await context.new_page()
         await main_page.goto('https://www.naver.com/')
+        account_info = await main_page.wait_for_selector('#account')
+
+        if '로그인' not in await account_info.text_content():
+            return
+
         await main_page.goto('https://nid.naver.com/nidlogin.login')
 
         await main_page.evaluate(
@@ -82,6 +99,7 @@ class NaverService(AbstractService):
             f"document.querySelector('input[id=\"pw\"]').setAttribute('value', '{self.NAVER_PW}')"
         )
 
+        await main_page.locator('#keep').click()
         await main_page.locator('#log\.login').click()
         await main_page.wait_for_load_state('networkidle')
 
@@ -96,6 +114,9 @@ class NaverService(AbstractService):
 
         await main_page.wait_for_load_state('networkidle')
 
+        with open("cookies/naver", "w") as f:
+            f.write(json.dumps(context.cookies()))
+
     async def fetch_items(self, url_list: list) -> dict:
         if url_list:
             async with async_playwright() as p:
@@ -103,6 +124,7 @@ class NaverService(AbstractService):
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(TIMEOUT)
+                await context.add_cookies(self.cookies)
 
                 if self.LOGIN:
                     await self._login(context)
@@ -128,6 +150,7 @@ class NaverService(AbstractService):
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
                 context.set_default_timeout(TIMEOUT)
+                await context.add_cookies(self.cookies)
 
                 if self.LOGIN:
                     await self._login(context)
