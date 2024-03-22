@@ -9,6 +9,7 @@ from util.favicon import get_favicon
 # Debug settings
 HEADLESS = True
 DELAY = 0
+TIMEOUT = 15000
 
 
 def pprint(*args, **kwargs):
@@ -101,7 +102,7 @@ class NaverService(AbstractService):
                 browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
-                context.set_default_timeout(10000)
+                context.set_default_timeout(TIMEOUT)
 
                 if self.LOGIN:
                     await self._login(context)
@@ -126,7 +127,7 @@ class NaverService(AbstractService):
                 browser = await p.chromium.launch(executable_path=self.chromium_path, headless=HEADLESS, slow_mo=DELAY)
                 context = await browser.new_context(
                     user_agent=USER_AGENT)
-                context.set_default_timeout(10000)
+                context.set_default_timeout(TIMEOUT)
 
                 if self.LOGIN:
                     await self._login(context)
