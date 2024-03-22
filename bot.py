@@ -135,7 +135,10 @@ class DiscordPriceBot(ds.Bot):
 
     async def update_item_dict(self) -> None:
         async def get(service):
-            self.item_dict[service.SERVICE_NAME] = await service.fetch_items(self.url_dict[service.SERVICE_NAME])
+            if self.url_dict[service.SERVICE_NAME]:
+                self.item_dict[service.SERVICE_NAME] = await service.fetch_items(self.url_dict[service.SERVICE_NAME])
+            else:
+                self.item_dict[service.SERVICE_NAME] = {}
 
         await asyncio.gather(*[get(service) for service in self.services.values()])
 
