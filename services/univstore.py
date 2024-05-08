@@ -28,8 +28,7 @@ class UnivStoreItem(BaseServiceItem):
 class UnivStoreService(AbstractService):
     SERVICE_DEFAULT_CONFIG = {
         'login': False,
-        'id': '',
-        'password': ''
+        'ses_id': ''
     }
     SERVICE_NAME = 'univstore'
     SERVICE_LABEL = '학생복지스토어'
@@ -37,10 +36,15 @@ class UnivStoreService(AbstractService):
     SERVICE_ICON = 'https://univstore.com/image/favicon.png'
 
     def __init__(self, cfg):
-        self.headers = {'User-Agent': USER_AGENT}
+        self.headers = {'User-Agent': USER_AGENT,
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+                        'Cache-Control': 'max-age=0',
+                        'Referer': 'https://univstore.com/'}
+
         self.LOGIN = cfg['login']
-        self.UNIVSTORE_ID = cfg['id']
-        self.UNIVSTORE_PASSWORD = cfg['password']
+        self.UNIVSTORE_SES_ID = cfg['ses_id']
 
         if not self.LOGIN:
             pprint("Warning: login is disabled. "
@@ -48,9 +52,7 @@ class UnivStoreService(AbstractService):
             self.jar = None
         else:
             self.jar = aiohttp.CookieJar()
-            if os.path.isfile('cookies/univstore'):
-                pprint('Loading saved cookie...')
-                self.jar.load('cookies/univstore')
+            self.jar.update_cookies({'univstoresid_v1': self.UNIVSTORE_SES_ID})
 
         pprint('univstore service initialized.')
 
@@ -60,24 +62,8 @@ class UnivStoreService(AbstractService):
         else:
             return None
 
-    async def _login(self, session):
-        await session.get('https://univstore.com/')
-        async with session.get('https://univstore.com/user/login') as r:
-            if 'login' in str(r.url):
-                pprint("Autologin cookie doesn't exist or has expired. Logging in...")
-                # Login POST data schema
-                # userid: Username
-                # password: Password
-                # autologin: 1 for true, 0 for false
-                data = {'userid': self.UNIVSTORE_ID, 'password': self.UNIVSTORE_PASSWORD, 'autologin': '1'}
-                await session.post('https://univstore.com/api/user/login', data=data)
-
-        self.jar.save('cookies/univstore')
-
     async def fetch_items(self, url_list: list) -> dict:
         async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar, timeout=TIMEOUT) as session:
-            if self.LOGIN:
-                await self._login(session)
             results = await asyncio.gather(*[self.get_product_info(url, session) for url in url_list])
 
         result_dict = {}
@@ -90,8 +76,6 @@ class UnivStoreService(AbstractService):
     async def get_product_info(self, url: str, session: aiohttp.ClientSession = None) -> Tuple[str, UnivStoreItem]:
         if not session:
             async with aiohttp.ClientSession(headers=self.headers, cookie_jar=self.jar, timeout=TIMEOUT) as session:
-                if self.LOGIN:
-                    await self._login(session)
                 return await self.get_product_info(url, session)
 
         async with session.get(url) as r:
@@ -125,3 +109,21 @@ class UnivStoreService(AbstractService):
         )
 
         return url, item
+
+
+if __name__ == '__main__':
+    use_login = True if input('Use login? (y/N): ').strip().lower() == 'y' else False
+    univstore = UnivStoreService({
+        'login': use_login,
+        'id': input('Enter univstore ID: ') if use_login else '',
+        'password': input('Enter univstore PW: ') if use_login else '',
+
+    })
+    print('Univstore module test')
+    test_url = input('Enter univstore item URL: ')
+    standardized_test_url = asyncio.run(univstore.standardize_url(test_url))
+    print('Standardized URL:', standardized_test_url)
+    _, test_item = asyncio.run(univstore.get_product_info(standardized_test_url))
+
+    for key, value in test_item.items():
+        print(key, '-', value)
