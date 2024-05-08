@@ -1,5 +1,5 @@
 import discord  # noqa
-from typing import Callable, Dict, Any, List
+from typing import Callable, Dict, Any, List, Coroutine
 from views.add import AddModal
 from views.select import ItemSelectView
 from services.base import AbstractService, BaseServiceItem
@@ -8,12 +8,12 @@ from util.embed_factory import get_embed
 
 class MenuView(discord.ui.View):
     def __init__(self, services: Dict[str, AbstractService], item_dict: Dict[str, Dict[str, BaseServiceItem]],
-                 add_callback: Callable[[discord.Interaction, str], Any],
-                 list_callback: Callable[[discord.Interaction], Any],
-                 info_callback: Callable[[discord.Interaction, str, str], Any],
-                 delete_callback: Callable[[discord.Interaction, str, List[str]], Any],
-                 interaction_callback: Callable,
-                 cancel_callback: Callable[[discord.Interaction], Any]):
+                 add_callback: Callable[[discord.Interaction, str], Coroutine],
+                 list_callback: Callable[[discord.Interaction], Coroutine],
+                 info_callback: Callable[[discord.Interaction, str, str], Coroutine],
+                 delete_callback: Callable[[discord.Interaction, str, List[str]], Coroutine],
+                 interaction_callback: Callable[[], Coroutine],
+                 cancel_callback: Callable[[discord.Interaction], Coroutine]):
         """Menu button view. All callbacks must be async functions.
         :param item_dict: 상품 딕셔너리
         :param add_callback: 추가 모달 콜백 (Interaction, url)
