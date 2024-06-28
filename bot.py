@@ -156,7 +156,7 @@ class DiscordPriceBot(ds.Bot):
     async def add(self, interaction: ds.Interaction, input_url: str):
         print('Trying to add URL:', input_url)
 
-        context_text = '상품을 추가하는 중입니다...'
+        context_text = f'상품 추가 중: {input_url}'
         await interaction.response.edit_message(embed=get_embed('상품 추가', context_text), view=None)
 
         async def update_context_message(text):
