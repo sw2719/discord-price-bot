@@ -49,7 +49,7 @@ class CoupangService(AbstractService):
             'user-agent': USER_AGENT,
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
-            'accept-language': 'ko-KR,ko;q=0.9',
+            'accept-language': 'ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3',
             'connection': 'keep-alive',
             'cache-control': 'max-age=0',
             'upgrade-insecure-requests': '1'
@@ -59,7 +59,7 @@ class CoupangService(AbstractService):
             'user-agent': USER_AGENT,
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
-            'accept-language': 'ko-KR,ko;q=0.9',
+            'accept-language': 'ko-KR,ko;q=0.8,en-US;q=0.5,en;q=0.3',
             'connection': 'keep-alive',
             'cache-control': 'max-age=0',
             'upgrade-insecure-requests': '1',
@@ -105,10 +105,18 @@ class CoupangService(AbstractService):
                 f = furl(input_string)
 
                 page_value = [string for string in re.findall('[0-9]*', input_string.split('?')[0]) if string][0]
-                item_id = f.args['itemId']
-                vendor_item_id = f.args['vendorItemId']
+                new_f = furl(f'https://www.coupang.com/vp/products/{page_value}')
 
-                url = f'https://www.coupang.com/vp/products/{page_value}?itemId={item_id}&vendorItemId={vendor_item_id}'
+                try:
+                    new_f.args['itemId'] = f.args['itemId']
+                except KeyError:
+                    pass
+                try:
+                    new_f.args['vendorItemId'] = f.args['vendorItemId']
+                except KeyError:
+                    pass
+
+                url = new_f.url
 
             else:
                 return None
@@ -144,7 +152,7 @@ class CoupangService(AbstractService):
         soup = BeautifulSoup(text, 'html.parser')
 
         price_match = soup.select('span.total-price > strong')
-        item_match = soup.find_all('h2', class_='prod-buy-header__title')
+        item_match = soup.find_all('h1', class_='prod-buy-header__title')
 
         item_name = re.sub('<[^<>]*>', '', str(item_match[0]))
 
